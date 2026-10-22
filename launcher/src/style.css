@@ -365,7 +365,7 @@ pre {
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 12px;
 }
 .privacy-grid li {
@@ -377,7 +377,8 @@ pre {
 }
 .privacy-grid li:nth-child(2) { --dot: var(--rust); }
 .privacy-grid li:nth-child(3) { --dot: var(--focus); }
-.privacy-grid li:nth-child(4) { --dot: var(--warn); }
+.privacy-grid li:nth-child(4) { --dot: var(--ok); }
+.privacy-grid li:nth-child(5) { --dot: var(--warn); }
 .privacy-grid h3 {
   display: flex;
   align-items: center;
@@ -407,6 +408,7 @@ pre {
 
 @media (max-width: 960px) {
   .privacy-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .privacy-grid li:last-child:nth-child(odd) { grid-column: 1 / -1; }
 }
 
 /* --- footer ----------------------------------------------------------------- */
@@ -499,3 +501,19 @@ body.exited #game #console { display: block; max-height: 60vh; }
 }
 .lag-hint p { margin: 6px 0 12px; color: #c9cdd3; line-height: 1.4; }
 .lag-hint .row { display: flex; gap: 8px; justify-content: flex-end; }
+
+/* --- multiplayer ---------------------------------------------------------------- */
+
+.bridge-status { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-weight: 500; }
+.bridge-status .button { margin-left: auto; }
+.bridge-status .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); flex: none; }
+.bridge-status.running { color: var(--ok); }
+.bridge-status.running .dot { background: var(--ok); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok), transparent 75%); }
+.bridge-status.missing { color: var(--muted); }
+.bridge-status.checking .dot { animation: pulse 1s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: 0.3; } }
+.steps { margin: 10px 0; padding-left: 1.3em; color: var(--muted); }
+.steps li + li { margin-top: 4px; }
+.steps code { font-size: 0.85em; }
+#bridge-download { margin-top: 2px; }
+a.button { text-decoration: none; }

@@ -1,0 +1,67 @@
+# Builds rustcraft-bridge for Windows, macOS and Linux and attaches the
+# binaries to a GitHub release when a tag bridge-v<version> is pushed:
+#   git tag bridge-v0.1.0 && git push origin bridge-v0.1.0
+name: bridge
+
+on:
+  push:
+    tags: ['bridge-v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            asset: rustcraft-bridge-linux-x86_64
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            asset: rustcraft-bridge-windows-x86_64.exe
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            asset: rustcraft-bridge-macos-arm64
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            asset: rustcraft-bridge-macos-x86_64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - if: matrix.target == 'x86_64-unknown-linux-musl'
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
+      - run: cargo build --release --manifest-path bridge/Cargo.toml --target ${{ matrix.target }}
+      - shell: bash
+        run: |
+          exe=bridge/target/${{ matrix.target }}/release/rustcraft-bridge
+          [ -f "$exe.exe" ] && exe="$exe.exe"
+          cp "$exe" "${{ matrix.asset }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset }}
+          path: ${{ matrix.asset }}
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/bridge-v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: assets
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: RustCraft Bridge ${{ github.ref_name }}
+          body: |
+            RustCraft Bridge lets RustCraft (Minecraft: Java Edition in the browser) connect to
+            Minecraft servers. Download the file for your system, start it and keep it running
+            while you play on servers. It listens on 127.0.0.1:25580 and only accepts the
+            RustCraft page. See bridge/README.md.
+          files: assets/*

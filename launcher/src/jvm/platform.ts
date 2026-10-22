@@ -5,7 +5,7 @@
 
 import { GlEmulation } from './gl';
 import { Memory } from './memory';
-import { INPUT, type DisplayMessage } from './protocol';
+import { INPUT, type DisplayMessage, type NetMessage } from './protocol';
 
 /** Frames sent but not yet shown that a presenting thread waits for. */
 const MAX_FRAMES_IN_FLIGHT = 2;
@@ -13,7 +13,7 @@ const MAX_FRAMES_IN_FLIGHT = 2;
 export interface PlatformHost {
   memory: WebAssembly.Memory;
   input: SharedArrayBuffer;
-  post(message: DisplayMessage, transfer?: Transferable[]): void;
+  post(message: DisplayMessage | NetMessage, transfer?: Transferable[]): void;
   /** malloc/free in the VM's memory (set once the instance exists). */
   malloc(size: number): number;
   free(pointer: number): void;
@@ -145,6 +145,12 @@ export function platformImports(host: PlatformHost) {
     },
     audio_start(ring: number) {
       host.post({ type: 'audio', ring: ring >>> 0 });
+    },
+    net_open(block: number, pointer: number, length: number) {
+      host.post({ type: 'net-open', block: block >>> 0, address: text(pointer, length) });
+    },
+    net_kick(block: number) {
+      host.post({ type: 'net-kick', block: block >>> 0 });
     },
     open_url(pointer: number, length: number) {
       host.post({ type: 'open-url', url: text(pointer, length) });

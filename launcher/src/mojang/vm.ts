@@ -1,6 +1,7 @@
 // Turns a launch plan into a process for our VM (rjava.wasm): the JVM flags it
 // understands, the extra flags it needs, and the file system it sees.
 
+import { DEFAULT_BRIDGE } from '../jvm/net';
 import type { MountSpec, ProcessConfig } from '../jvm/protocol';
 import { GAME_DIR, inGameDir, layout, OPFS_ROOT } from './layout';
 import type { LaunchPlan } from './launchPlan';
@@ -40,6 +41,8 @@ export const VM_JVM_ARGS = [
 export interface VmOptions {
   /** Java heap in MiB. */
   heapMb: number;
+  /** rustcraft-bridge for the game's TCP connections (default DEFAULT_BRIDGE). */
+  netBridge?: string;
 }
 
 /**
@@ -99,5 +102,6 @@ export function vmProcess(plan: LaunchPlan, options: VmOptions): ProcessConfig {
     ],
     env: { HOME: GAME_DIR, PWD: GAME_DIR },
     mounts: vmMounts(plan.assetIndex),
+    netBridge: options.netBridge ?? DEFAULT_BRIDGE,
   };
 }

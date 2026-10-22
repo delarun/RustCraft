@@ -141,6 +141,29 @@ export const ru: Messages = {
   // --- settings ---
   settingsTitle: 'Настройки',
   systemCheckTitle: 'Проверка браузера',
+
+  // --- multiplayer ---
+  multiplayerTitle: 'Сетевая игра',
+  bridgeChecking: 'Ищу RustCraft Bridge…',
+  bridgeRunning: (version: S) => `Мост запущен (версия ${version})`,
+  bridgeNotFound: 'Мост не найден',
+  bridgeCheck: 'Проверить снова',
+  multiplayerExplain:
+    'Браузеры не умеют открывать TCP-соединения с серверами Minecraft. Чтобы играть на серверах, запустите на своём компьютере ' +
+    'небольшую программу RustCraft Bridge: игра подключается к ней, а она — к серверу. Для одиночной игры она не нужна.',
+  bridgeDownload: 'Скачать RustCraft Bridge',
+  bridgeHowToHtml:
+    '<li>Скачайте файл для своей системы (Windows, macOS или Linux) со страницы релизов.</li>' +
+    '<li>Запустите его и не закрывайте, пока играете на серверах.</li>' +
+    '<li>macOS и Linux: если не запускается, сначала сделайте файл исполняемым (<code>chmod +x</code>). ' +
+    'Программа не подписана, поэтому Windows SmartScreen или macOS могут предупредить перед запуском.</li>',
+  bridgeLocalNetwork:
+    'Когда страница впервые обратится к мосту, Chrome может спросить, разрешить ли сайту доступ к устройствам в локальной сети. ' +
+    'Разрешите, иначе страница не сможет связаться с мостом.',
+  bridgeAdvanced: 'Дополнительно: адрес моста',
+  bridgeAddressLabel: 'Адрес моста',
+  bridgeAddressInvalid: 'Введите адрес, начинающийся с ws:// или wss://, например ws://127.0.0.1:25580.',
+  bridgeAddressInUse: (address: S) => `Игра подключается через ${address}.`,
   systemCheckOk: 'В этом браузере есть всё, что нужно игре.',
   systemCheckProblems: 'Не хватает возможностей, нужных игре:',
 
@@ -182,6 +205,10 @@ export const ru: Messages = {
   privacyFilesHtml:
     'Скачиваются с серверов Mojang в хранилище этого браузера (OPFS). Библиотеки и ассеты идут потоком через тот же прокси ' +
     'и у нас не сохраняются.',
+  privacyMultiplayerTitle: 'Сетевая игра',
+  privacyMultiplayerHtml:
+    'Соединения игры (серверы, онлайн-сервисы, к которым она обращается) идут из браузера в RustCraft Bridge на вашем ' +
+    'компьютере (по умолчанию <code>ws://127.0.0.1:25580</code>), а оттуда — прямо к адресату, минуя наши серверы.',
   privacySettingsTitle: 'Настройки',
   privacySettingsHtml: 'Версия, принятие EULA, язык и прочие настройки хранятся в localStorage этого браузера. Без cookies, аналитики и рекламы.',
 

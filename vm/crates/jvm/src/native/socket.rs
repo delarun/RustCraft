@@ -53,7 +53,8 @@ pub(super) fn register(n: &mut Natives) {
     });
     n.add("sun/nio/ch/Net.connect0(ZLjava/io/FileDescriptor;Ljava/net/InetAddress;I)I", |t, a| {
         let address = socket_address(t, arg_ref(a, 2), arg_i(a, 3))?;
-        let result = socket(t, arg_ref(a, 1))?.lock().unwrap().connect(address);
+        let socket = socket(t, arg_ref(a, 1))?;
+        let result = t.blocking(|| socket.lock().unwrap().connect(address));
         result.map_err(|e| exception(t, "java/net/ConnectException", &e))?;
         ret_i(1)
     });

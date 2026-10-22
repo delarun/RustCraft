@@ -71,6 +71,11 @@ fn resolve(host: &str) -> Vec<u32> {
     if let Ok(ip) = host.parse::<std::net::Ipv4Addr>() {
         return vec![u32::from(ip)];
     }
+    // In the browser the bridge resolves names: a stand-in address for now.
+    #[cfg(target_family = "wasm")]
+    if host.len() <= 253 && host.contains('.') && host.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'.' || b == b'-') {
+        return vec![crate::web::net::stand_in(host)];
+    }
     #[cfg(not(target_family = "wasm"))]
     {
         use std::net::ToSocketAddrs;

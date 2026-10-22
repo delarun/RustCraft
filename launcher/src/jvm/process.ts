@@ -14,6 +14,7 @@ import {
   type ThreadStart,
   type ToIo,
 } from './protocol';
+import { NetBridge } from './net';
 
 export interface ProcessCallbacks {
   /** Complete lines written to stdout (1) or stderr (2). */
@@ -33,6 +34,7 @@ export class JvmProcess {
   private pending = ['', ''];
   private decoders = [new TextDecoder(), new TextDecoder()];
   private exited = false;
+  private net: NetBridge;
   private exitCode = 0;
 
   private constructor(
@@ -44,6 +46,7 @@ export class JvmProcess {
     readonly input: SharedArrayBuffer,
   ) {
     this.memory = new WebAssembly.Memory({ ...limits, shared: true });
+    this.net = new NetBridge(this.memory, config.netBridge);
     this.io = new Worker(new URL('./io.worker.ts', import.meta.url), { type: 'module', name: 'jvm io' });
     this.io.onmessage = (event: MessageEvent<FromIo>) => this.fromIo(event.data);
     this.io.onerror = (event) => this.fail(`I/O worker: ${event.message}`);
@@ -135,6 +138,12 @@ export class JvmProcess {
         break;
       case 'error':
         this.fail(`thread ${message.tid}: ${message.message}`);
+        break;
+      case 'net-open':
+        this.net.open(message.block, message.address);
+        break;
+      case 'net-kick':
+        this.net.kick(message.block);
         break;
       default:
         this.callbacks.onDisplay?.(message);

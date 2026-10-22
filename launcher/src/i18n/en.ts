@@ -141,6 +141,29 @@ export const en = {
   // --- settings ---
   settingsTitle: 'Settings',
   systemCheckTitle: 'System check',
+
+  // --- multiplayer ---
+  multiplayerTitle: 'Multiplayer',
+  bridgeChecking: 'Looking for RustCraft Bridge…',
+  bridgeRunning: (version: S) => `Bridge running (version ${version})`,
+  bridgeNotFound: 'Bridge not found',
+  bridgeCheck: 'Check again',
+  multiplayerExplain:
+    'Browsers cannot open TCP connections to Minecraft servers. To play on servers, run the small RustCraft Bridge program ' +
+    'on your computer: the game connects to it, and it connects to the server. Singleplayer does not need it.',
+  bridgeDownload: 'Download RustCraft Bridge',
+  bridgeHowToHtml:
+    '<li>Download the file for your system (Windows, macOS or Linux) from the releases page.</li>' +
+    '<li>Start it and keep it open while you play on servers.</li>' +
+    '<li>macOS and Linux: if it does not start, make it executable first (<code>chmod +x</code> on the file). ' +
+    'The program is not signed, so Windows SmartScreen or macOS may warn before running it.</li>',
+  bridgeLocalNetwork:
+    'When the page first contacts the bridge, Chrome may ask whether this site may access devices on your local network. ' +
+    'Allow it, or the page cannot reach the bridge.',
+  bridgeAdvanced: 'Advanced: bridge address',
+  bridgeAddressLabel: 'Bridge address',
+  bridgeAddressInvalid: 'Enter an address that starts with ws:// or wss://, like ws://127.0.0.1:25580.',
+  bridgeAddressInUse: (address: S) => `The game connects through ${address}.`,
   systemCheckOk: 'This browser has everything the game needs.',
   systemCheckProblems: 'Some features this game needs are missing:',
 
@@ -182,6 +205,10 @@ export const en = {
   privacyFilesHtml:
     'Downloaded from Mojang’s servers into this browser’s storage (OPFS). Libraries and assets stream through the same proxy ' +
     'and are not stored by us.',
+  privacyMultiplayerTitle: 'Multiplayer',
+  privacyMultiplayerHtml:
+    'The game’s connections (servers you join, online services it contacts) go from this browser to RustCraft Bridge ' +
+    'on your computer (<code>ws://127.0.0.1:25580</code> by default), then straight to their destination — never through our servers.',
   privacySettingsTitle: 'Settings',
   privacySettingsHtml: 'Version, EULA acceptance, language and other settings live in this browser’s localStorage. No cookies, analytics or ads.',
 

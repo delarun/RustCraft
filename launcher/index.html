@@ -145,6 +145,28 @@
             </div>
           </details>
 
+          <details class="group" id="multiplayer">
+            <summary data-i18n="multiplayerTitle"></summary>
+            <div class="bridge-status">
+              <span class="dot" id="bridge-dot" aria-hidden="true"></span>
+              <span id="bridge-status" role="status"></span>
+              <button id="bridge-check" class="button ghost small" data-i18n="bridgeCheck"></button>
+            </div>
+            <p class="small" data-i18n="multiplayerExplain"></p>
+            <a id="bridge-download" class="button primary small" target="_blank" rel="noopener" data-i18n="bridgeDownload"></a>
+            <ol class="small steps" data-i18n-html="bridgeHowToHtml"></ol>
+            <p class="small muted" data-i18n="bridgeLocalNetwork"></p>
+            <details>
+              <summary data-i18n="bridgeAdvanced"></summary>
+              <label for="bridge-address" class="label" data-i18n="bridgeAddressLabel"></label>
+              <div class="inline-input">
+                <input id="bridge-address" type="text" spellcheck="false" autocomplete="off" />
+                <button id="bridge-save" class="button ghost small" data-i18n="save"></button>
+              </div>
+              <p class="status" id="bridge-note"></p>
+            </details>
+          </details>
+
           <details class="group" id="system">
             <summary data-i18n="systemCheckTitle"></summary>
             <p class="small" id="system-summary"></p>
@@ -176,6 +198,10 @@
           <li>
             <h3 data-i18n="privacyFilesTitle"></h3>
             <p data-i18n-html="privacyFilesHtml"></p>
+          </li>
+          <li>
+            <h3 data-i18n="privacyMultiplayerTitle"></h3>
+            <p data-i18n-html="privacyMultiplayerHtml"></p>
           </li>
           <li>
             <h3 data-i18n="privacySettingsTitle"></h3>

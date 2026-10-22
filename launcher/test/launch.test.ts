@@ -103,6 +103,8 @@ describe('VM process', () => {
     expect(game.slice(game.indexOf('--uuid'), game.indexOf('--uuid') + 2)).toEqual(['--uuid', '069a79f4-44e9-4726-a5be-fca90e38aaf5']);
     expect(game).toContain('--gameDir');
     expect(game[game.indexOf('--gameDir') + 1]).toBe('/minecraft');
+    expect(config.netBridge).toBe('ws://127.0.0.1:25580');
+    expect(vmProcess(plan, { heapMb: 1024, netBridge: 'ws://10.0.0.2:25580' }).netBridge).toBe('ws://10.0.0.2:25580');
     expect(config.mounts).toEqual([
       { path: '/minecraft', kind: 'opfs', root: 'minecraft', lazy: { dir: '/assets/objects', index: '/assets/indexes/34.json', url: '/proxy/resources.download.minecraft.net' } },
       { path: '/natives', kind: 'memory', files: STUB_NATIVES },

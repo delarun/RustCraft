@@ -14,6 +14,7 @@ import type { VersionJson, VersionManifest, VersionManifestEntry } from './mojan
 import { vmProcess } from './mojang/vm';
 import { clearDownloads, clearGameDir, readJson, requestPersistence, storageInfo, writeTextIfMissing, type StorageInfo } from './storage/opfs';
 import { AccountView } from './ui/account';
+import { MultiplayerView } from './ui/multiplayer';
 import { $, formatBytes, prefs } from './ui/dom';
 import { runGame } from './ui/game';
 
@@ -67,6 +68,7 @@ let progress: InstallProgress | null = null;
 let plan: LaunchPlan | null = null;
 let storage: StorageInfo | Text | null = null;
 const account = new AccountView(() => updatePlayButton());
+const multiplayer = new MultiplayerView();
 
 // --- environment ----------------------------------------------------------------
 
@@ -327,7 +329,7 @@ async function play() {
     plan = makePlan(version);
     renderPlan();
     await writeTextIfMissing('options.txt', DEFAULT_OPTIONS);
-    await runGame(vmProcess(plan, { heapMb: Number(ui.memory.value) }), {
+    await runGame(vmProcess(plan, { heapMb: Number(ui.memory.value), netBridge: multiplayer.address }), {
       onStatus: (message) => setStatus({ key: 'text', args: [message] }),
       onExit: (code) => setStatus({ key: 'gameExited', args: [code] }, code !== 0),
     });
@@ -362,7 +364,7 @@ function renderPlan() {
       Object.assign(document.createElement('dd'), { textContent: value }),
     ]),
   );
-  ui.planArgv.textContent = vmProcess(plan, { heapMb: Number(ui.memory.value) })
+  ui.planArgv.textContent = vmProcess(plan, { heapMb: Number(ui.memory.value), netBridge: multiplayer.address })
     .args.map((arg, i, args) => (args[i - 1] === '--accessToken' ? t.hidden : arg))
     .map((arg) => (arg.includes(':/') ? arg.split(':').join(':\n    ') : arg))
     .join('\n  ');

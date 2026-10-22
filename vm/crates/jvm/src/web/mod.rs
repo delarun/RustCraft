@@ -14,6 +14,7 @@ mod gl;
 mod invoke;
 mod libs;
 mod lwjgl;
+pub(crate) mod net;
 mod sdl;
 mod shaders;
 mod stb;

@@ -17,9 +17,10 @@ Website: <https://rustcraft.online>
 - Minecraft **26.3** (Java 25) starts in Chrome and is playable: title screen,
   singleplayer world creation, input, sound and saves.
 - The integrated server is the bottleneck. It keeps up at smaller simulation distances, so
-  the launcher defaults to render distance 8 and simulation distance 6. JIT work is ongoing.
-- Multiplayer and online services (Realms, skins) are not available yet: the VM has no
-  network access from the browser.
+  the launcher defaults to render distance 8 and simulation distance 5. JIT work is ongoing.
+- Multiplayer works through **RustCraft Bridge** ([bridge/](bridge/README.md)), a small
+  program the player runs on their computer: a web page cannot open TCP connections, so the
+  game's sockets go over a WebSocket to the bridge, which connects to the server.
 
 ## How it works
 
@@ -43,6 +44,7 @@ vm/                the JVM (Rust)
   crates/jit-wasmtime  JIT backend for native development and tests (wasmtime)
   crates/rjava     the `rjava` launcher binary (native and wasm32-wasip1-threads)
   native-libs/     scripts that build the C/C++ libraries linked into rjava.wasm
+bridge/            RustCraft Bridge: a local WebSocket → TCP bridge for multiplayer (Rust, std only)
 ```
 
 - **The VM.** It interprets bytecode and compiles hot methods into WebAssembly modules.

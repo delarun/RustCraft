@@ -23,6 +23,9 @@ pub enum Endpoint {
     Stream(TcpStream),
     PipeRead(Arc<Mutex<VecDeque<u8>>>),
     PipeWrite(Arc<Mutex<VecDeque<u8>>>),
+    /// In the browser: a TCP connection through rustcraft-bridge.
+    #[cfg(target_family = "wasm")]
+    Bridge(crate::web::net::Connection),
 }
 
 pub type Socket = Arc<Mutex<Endpoint>>;
@@ -84,12 +87,18 @@ impl Endpoint {
                 }
             }
             Endpoint::PipeWrite(_) => revents |= events & POLLOUT,
+            #[cfg(target_family = "wasm")]
+            Endpoint::Bridge(connection) => revents = connection.ready(events),
         }
         revents
     }
 
     /// Non-blocking read: Ok(None) when no data is available yet.
     pub fn read(&mut self, buf: &mut [u8]) -> io::Result<Option<usize>> {
+        #[cfg(target_family = "wasm")]
+        if let Endpoint::Bridge(connection) = self {
+            return connection.read(buf);
+        }
         let result = match self {
             Endpoint::Stream(stream) => stream.read(buf),
             Endpoint::PipeRead(buffer) => {
@@ -114,6 +123,10 @@ impl Endpoint {
 
     /// Non-blocking write: Ok(None) when the socket cannot take data yet.
     pub fn write(&mut self, data: &[u8]) -> io::Result<Option<usize>> {
+        #[cfg(target_family = "wasm")]
+        if let Endpoint::Bridge(connection) = self {
+            return connection.write(data);
+        }
         let result = match self {
             Endpoint::Stream(stream) => stream.write(data),
             Endpoint::PipeWrite(buffer) => {
@@ -138,11 +151,19 @@ impl Endpoint {
         Ok(())
     }
 
+    /// Connects (blocking: call outside Java code).
     pub fn connect(&mut self, address: SocketAddr) -> io::Result<()> {
-        let stream = TcpStream::connect(address)?;
-        stream.set_nonblocking(true)?;
-        stream.set_nodelay(true)?;
-        *self = Endpoint::Stream(stream);
+        #[cfg(target_family = "wasm")]
+        {
+            *self = Endpoint::Bridge(crate::web::net::Connection::connect(address)?);
+        }
+        #[cfg(not(target_family = "wasm"))]
+        {
+            let stream = TcpStream::connect(address)?;
+            stream.set_nonblocking(true)?;
+            stream.set_nodelay(true)?;
+            *self = Endpoint::Stream(stream);
+        }
         Ok(())
     }
 
@@ -164,6 +185,8 @@ impl Endpoint {
             Endpoint::Unbound { bind } => *bind,
             Endpoint::Listener { listener, .. } => listener.local_addr().ok(),
             Endpoint::Stream(stream) => stream.local_addr().ok(),
+            #[cfg(target_family = "wasm")]
+            Endpoint::Bridge(_) => Some(SocketAddr::from(([127, 0, 0, 1], 0))),
             _ => None,
         }
     }
@@ -171,6 +194,8 @@ impl Endpoint {
     pub fn remote_address(&self) -> Option<SocketAddr> {
         match self {
             Endpoint::Stream(stream) => stream.peer_addr().ok(),
+            #[cfg(target_family = "wasm")]
+            Endpoint::Bridge(connection) => Some(connection.remote()),
             _ => None,
         }
     }
@@ -178,6 +203,13 @@ impl Endpoint {
     pub fn shutdown(&mut self, how: Shutdown) -> io::Result<()> {
         match self {
             Endpoint::Stream(stream) => stream.shutdown(how),
+            #[cfg(target_family = "wasm")]
+            Endpoint::Bridge(connection) => {
+                // The WebSocket has no half-close: either way ends it.
+                let _ = how;
+                connection.close();
+                Ok(())
+            }
             _ => Ok(()),
         }
     }
@@ -189,6 +221,8 @@ impl Endpoint {
                 stream.peek(&mut buf).unwrap_or(0)
             }
             Endpoint::PipeRead(buffer) => buffer.lock().unwrap().len(),
+            #[cfg(target_family = "wasm")]
+            Endpoint::Bridge(connection) => connection.available(),
             _ => 0,
         }
     }

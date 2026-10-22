@@ -1,0 +1,16 @@
+[package]
+name = "rustcraft-bridge"
+version = "0.1.0"
+edition = "2024"
+license = "AGPL-3.0-only"
+description = "Lets RustCraft (Minecraft in the browser) connect to Minecraft servers: a local WebSocket-to-TCP bridge"
+
+[dependencies]
+
+[profile.release]
+opt-level = "s"
+lto = true
+strip = true
+panic = "abort"
+
+[workspace]

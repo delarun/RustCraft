@@ -54,11 +54,13 @@ try {
   // No hot reload (vite's client talks over a WebSocket): editing sources
   // must not restart the program mid-run.
   await page.evaluateOnNewDocument(() => {
-    window.WebSocket = class {
-      addEventListener() {}
-      close() {}
-      send() {}
+    const Real = window.WebSocket;
+    window.WebSocket = function (url, protocols) {
+      const list = [protocols ?? []].flat();
+      if (list.some((p) => String(p).startsWith('vite'))) return { addEventListener() {}, close() {}, send() {} };
+      return new Real(url, protocols);
     };
+    Object.assign(window.WebSocket, { CONNECTING: 0, OPEN: 1, CLOSING: 2, CLOSED: 3 });
   });
   await page.goto(`${URL}jvm.html`);
   await page.waitForFunction(() => typeof window.runJvm === 'function');
@@ -107,6 +109,8 @@ try {
       wasm,
       args: ['rjava', '--modules', `${repo}/.scratch/jre25/lib/modules`, ...args],
       env: { PWD: '/work', HOME: '/work', ...env },
+      // NET_BRIDGE: rustcraft-bridge's address (TCP connections).
+      netBridge: process.env.NET_BRIDGE ?? 'ws://127.0.0.1:25580',
       // MEMORY_PAGES: the initial memory size (64 KiB pages).
       initialPages: process.env.MEMORY_PAGES ? Number(process.env.MEMORY_PAGES) : undefined,
       mounts: [

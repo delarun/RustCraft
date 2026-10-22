@@ -76,6 +76,8 @@ export interface ProcessConfig {
   mounts: MountSpec[];
   /** Initial memory size in 64 KiB pages (default: the module's minimum). */
   initialPages?: number;
+  /** ws://host:port of rustcraft-bridge, for TCP connections (see net.ts). */
+  netBridge?: string;
 }
 
 // Messages.
@@ -108,7 +110,13 @@ export type FromThread =
   | { type: 'exit'; code: number }
   | { type: 'done'; tid: number }
   | { type: 'error'; tid: number; message: string }
+  | NetMessage
   | DisplayMessage;
+
+/** From a VM thread to the page's NetBridge (see net.ts). */
+export type NetMessage =
+  | { type: 'net-open'; block: number; address: string }
+  | { type: 'net-kick'; block: number };
 
 /** From the thread that owns a window to the page (see display.ts). */
 export type DisplayMessage =
