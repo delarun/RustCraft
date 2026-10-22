@@ -135,6 +135,7 @@ gl! {
     "GL12C" nglTexSubImage3D(target: i, level: i, x: i, y: i, z: i, w: i, h: i, d: i, format: i, kind: i, pixels: p) v;
     "GL13C" glActiveTexture(texture: i) v;
     "GL14C" glBlendEquation(mode: i) v;
+    "GL14C" nglMultiDrawArrays(mode: i, first: p, count: p, drawcount: i) v;
     "GL14C" glBlendFuncSeparate(srgb: i, drgb: i, salpha: i, dalpha: i) v;
     "GL15C" glBeginQuery(target: i, id: i) v;
     "GL15C" glBindBuffer(target: i, buffer: i) v;
@@ -183,6 +184,7 @@ gl! {
     "GL30C" glBindVertexArray(array: i) v;
     "GL30C" glBlitFramebuffer(sx0: i, sy0: i, sx1: i, sy1: i, dx0: i, dy0: i, dx1: i, dy1: i, mask: i, filter: i) v;
     "GL30C" glCheckFramebufferStatus(target: i) i;
+    "GL30C" glColorMaski(index: i, r: z, g: z, b: z, a: z) v;
     "GL30C" glDisablei(target: i, index: i) v;
     "GL30C" glEnablei(target: i, index: i) v;
     "GL30C" glFlushMappedBufferRange(target: i, offset: l, length: l) v;
@@ -214,6 +216,7 @@ gl! {
     "GL32C" nglClientWaitSync(sync: l, flags: i, timeout: w) i;
     "GL32C" nglDrawElementsBaseVertex(mode: i, count: i, kind: i, indices: p, base: i) v;
     "GL32C" nglDrawElementsInstancedBaseVertex(mode: i, count: i, kind: i, indices: p, instances: i, base: i) v;
+    "GL32C" nglMultiDrawElementsBaseVertex(mode: i, count: p, kind: i, indices: p, drawcount: i, base: p) v;
     "GL33C" glBindSampler(unit: i, sampler: i) v;
     "GL33C" glQueryCounter(id: i, target: i) v;
     "GL33C" nglGetQueryObjecti64v(id: i, pname: i, params: p) v;

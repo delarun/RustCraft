@@ -6,7 +6,7 @@
 //
 // Emulated: base-vertex draws (attribute pointers shifted per draw), mapped
 // buffer ranges (a block of the VM's memory, uploaded on unmap), glDrawBuffer,
-// glEnablei/glDisablei, texture level queries; ignored: polygon modes,
+// glEnablei/glDisablei/glColorMaski, multi-draws, texture level queries; ignored: polygon modes,
 // texture buffers (not in WebGL2; reported).
 
 import { rewriteForWebGl } from './glsl';
@@ -169,7 +169,11 @@ class Context {
   drawFramebuffer = 0;
   mappings = new Map<number, Mapping>();
   baseVertex: { drawElementsInstancedBaseVertexBaseInstanceWEBGL: Function } | null;
-  drawBuffersIndexed: { enableiOES(target: number, index: number): void; disableiOES(target: number, index: number): void } | null;
+  drawBuffersIndexed: {
+    enableiOES(target: number, index: number): void;
+    disableiOES(target: number, index: number): void;
+    colorMaskiOES(index: number, r: boolean, g: boolean, b: boolean, a: boolean): void;
+  } | null;
   anisotropy: boolean;
   strings = new Map<number, number>();
   /** Buffer bindings by target, and buffer sizes (for texel buffers). */
@@ -857,6 +861,10 @@ export class GlEmulation {
       glBlitFramebuffer: (a: number, b: number, c: number, d: number, e: number, f: number, h: number, i: number, mask: number, filter: number) =>
         g().blitFramebuffer(a, b, c, d, e, f, h, i, mask, filter),
       glCheckFramebufferStatus: (target: number) => g().checkFramebufferStatus(target),
+      glColorMaski(index: number, r: number, gr: number, b: number, a: number) {
+        if (self.c.drawBuffersIndexed) self.c.drawBuffersIndexed.colorMaskiOES(index, !!r, !!gr, !!b, !!a);
+        else if (index === 0) g().colorMask(!!r, !!gr, !!b, !!a);
+      },
       glDisablei(target: number, index: number) {
         if (self.c.drawBuffersIndexed) self.c.drawBuffersIndexed.disableiOES(target, index);
         else if (index === 0) g().disable(target);
@@ -999,6 +1007,18 @@ export class GlEmulation {
         self.drawBaseVertex(mode, count, type, indices, 1, base),
       nglDrawElementsInstancedBaseVertex: (mode: number, count: number, type: number, indices: number, instances: number, base: number) =>
         self.drawBaseVertex(mode, count, type, indices, instances, base),
+      // Multi-draws as a loop of draws (arrays of ints and 32-bit pointers).
+      nglMultiDrawArrays(mode: number, first: number, count: number, drawcount: number) {
+        self.prepareDraw();
+        const i32 = self.memory.i32;
+        for (let i = 0; i < drawcount; i++) g().drawArrays(mode, i32[(first >>> 2) + i], i32[(count >>> 2) + i]);
+      },
+      nglMultiDrawElementsBaseVertex(mode: number, count: number, type: number, indices: number, drawcount: number, base: number) {
+        for (let i = 0; i < drawcount; i++) {
+          const i32 = self.memory.i32;
+          self.drawBaseVertex(mode, i32[(count >>> 2) + i], type, i32[(indices >>> 2) + i] >>> 0, 1, i32[(base >>> 2) + i]);
+        }
+      },
       glBindSampler: (unit: number, sampler: number) => g().bindSampler(unit, self.c.samplers.get(sampler)),
       // Queries (timestamps, elapsed time; other kinds report 1) on the CPU clock.
       nglGenQueries(n: number, pointer: number) {
