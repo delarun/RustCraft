@@ -65,11 +65,29 @@ const DEV_FS_ROOTS = [
   '/mnt/data/Apps/PrismLauncher/libraries',
   '/mnt/data/Apps/PrismLauncher/assets',
 ];
+/** A request made directly to this machine by a local or LAN client. */
+function isLocalRequest(req: { headers: Record<string, string | string[] | undefined>; socket: { remoteAddress?: string } }): boolean {
+  if (req.headers['x-forwarded-for'] || req.headers['forwarded'] || req.headers['cf-connecting-ip']) return false;
+  const host = String(req.headers.host ?? '').replace(/:\d+$/, '').replace(/^\[|\]$/g, '');
+  const privateAddress = (a: string) =>
+    a === 'localhost' || a === '::1' || /^127\./.test(a) || /^10\./.test(a) || /^192\.168\./.test(a) || /^172\.(1[6-9]|2\d|3[01])\./.test(a);
+  const remote = (req.socket.remoteAddress ?? '').replace(/^::ffff:/, '');
+  return privateAddress(host) && privateAddress(remote);
+}
+
 const devFs = (): Plugin => ({
   name: 'dev-fs',
   apply: 'serve',
   configureServer(server) {
     server.middlewares.use('/dev-fs', async (req, res) => {
+      // Local files (the game's JAR, Prism's libraries and assets) must never
+      // be served to the outside: only to requests made directly to localhost
+      // or a private address, not through a domain, tunnel or reverse proxy.
+      if (!isLocalRequest(req)) {
+        res.statusCode = 403;
+        res.end('dev-fs is only available locally');
+        return;
+      }
       const url = new URL(req.url ?? '/', 'http://localhost');
       const path = resolve(decodeURIComponent(url.pathname));
       const allowed = DEV_FS_ROOTS.some((root) => path === root || path.startsWith(`${root}/`));
@@ -105,7 +123,9 @@ export default defineConfig({
   plugins: [corsProxy(), devFs(), rjavaWasm(), rjavaWasmAsset()],
   // jvm.html is the developer console: served by `pnpm dev`, not part of the site.
   build: { rollupOptions: { input: ['index.html'] } },
-  server: { headers: isolationHeaders },
-  preview: { headers: isolationHeaders },
+  // rustcraft.online may point at this machine during development (e.g.
+  // through a tunnel or reverse proxy); Vite rejects unknown Host headers.
+  server: { headers: isolationHeaders, allowedHosts: ['rustcraft.online', '.rustcraft.online'] },
+  preview: { headers: isolationHeaders, allowedHosts: ['rustcraft.online', '.rustcraft.online'] },
   worker: { format: 'es' },
 });

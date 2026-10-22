@@ -20,7 +20,7 @@ import { runGame } from './ui/game';
 /** options.txt for a new game directory (the game keeps the rest at its
  *  defaults): shorter render and simulation distances than vanilla's 12, which
  *  the integrated server running in the browser cannot keep up with. */
-const DEFAULT_OPTIONS = 'renderDistance:8\nsimulationDistance:6\n';
+const DEFAULT_OPTIONS = 'renderDistance:8\nsimulationDistance:5\n';
 
 initLang();
 

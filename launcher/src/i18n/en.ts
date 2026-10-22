@@ -160,6 +160,10 @@ export const en = {
   // --- game ---
   loadingJvm: 'Loading the JVM…',
   gameStarted: 'The game is running',
+  lagHintTitle: 'The world can’t keep up',
+  lagHintText: 'The built-in server runs in your browser and falls behind. In Options → Video Settings, lower the Simulation Distance (and the Render Distance) to make the game smoother.',
+  lagHintOk: 'Got it',
+  lagHintNever: 'Don’t show again',
   jvmExited: (code: N) => `— the JVM exited with code ${code}`,
   confirmStop: 'Stop the game? Unsaved progress will be lost.',
   stop: 'Stop',

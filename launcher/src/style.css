@@ -491,3 +491,11 @@ body.playing .page { display: none; }
 body.exited #game #console { display: block; max-height: 60vh; }
 #stop { position: absolute; top: 8px; right: 8px; opacity: 0.4; background: rgb(0 0 0 / 0.5); color: #fff; border-color: #555; }
 #stop:hover, #stop:focus-visible { opacity: 1; }
+.lag-hint {
+  position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%);
+  width: min(460px, calc(100vw - 32px)); padding: 14px 16px; border-radius: 12px;
+  background: rgb(18 20 24 / 0.92); color: #f2f2f2; border: 1px solid rgb(255 255 255 / 0.12);
+  box-shadow: 0 12px 30px rgb(0 0 0 / 0.45); font-size: 0.9rem; z-index: 2;
+}
+.lag-hint p { margin: 6px 0 12px; color: #c9cdd3; line-height: 1.4; }
+.lag-hint .row { display: flex; gap: 8px; justify-content: flex-end; }
