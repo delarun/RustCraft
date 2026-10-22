@@ -1,0 +1,14 @@
+node_modules/
+dist/
+target/
+target-*/
+# Core dumps
+core
+core.[0-9]*
+*.log
+.e2e-profile/
+.scratch/
+
+# Local environment (e.g. VITE_MS_CLIENT_ID for development)
+.env.local
+.env.*.local

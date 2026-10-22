@@ -1,0 +1,20 @@
+[workspace]
+resolver = "3"
+members = ["crates/*"]
+
+[workspace.package]
+edition = "2024"
+version = "0.1.0"
+
+[workspace.dependencies]
+classfile = { path = "crates/classfile" }
+jimage = { path = "crates/jimage" }
+jvm = { path = "crates/jvm" }
+jit-wasmtime = { path = "crates/jit-wasmtime" }
+jit-web = { path = "crates/jit-web" }
+
+[profile.dev]
+opt-level = 1
+
+[profile.release]
+debug = 1

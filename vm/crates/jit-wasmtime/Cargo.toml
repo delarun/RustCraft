@@ -1,0 +1,9 @@
+[package]
+name = "jit-wasmtime"
+description = "Native backend for the JIT: runs compiled WebAssembly with wasmtime"
+edition.workspace = true
+version.workspace = true
+
+[dependencies]
+jvm.workspace = true
+wasmtime = { version = "50", default-features = false, features = ["cranelift", "runtime", "threads", "parallel-compilation", "std"] }

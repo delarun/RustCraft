@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>JVM Console</title>
+    <link rel="icon" href="data:," />
+    <style>
+      :root { color-scheme: light dark; --bg: #fff; --fg: #1b1b1b; --err: #b3261e; }
+      @media (prefers-color-scheme: dark) { :root { --bg: #161616; --fg: #e6e6e6; --err: #ff8a80; } }
+      body { margin: 0; padding: 16px; background: var(--bg); color: var(--fg); font: 13px/1.4 ui-monospace, monospace; }
+      pre { margin: 0; white-space: pre-wrap; word-break: break-all; }
+      #screen { position: relative; width: 100%; height: 70vh; background: #000; }
+      #screen:not(:has(canvas:not([hidden]))) { visibility: hidden; height: 70vh; }
+      .jvm-display { display: block; outline: none; }
+      body.play { padding: 0; overflow: hidden; }
+      body.play #screen { height: 100vh; visibility: visible; }
+      body.play #console { position: fixed; left: 0; right: 0; bottom: 0; max-height: 30vh; overflow: auto; background: rgb(0 0 0 / 0.6); color: #ddd; font-size: 11px; pointer-events: none; }
+      body.play:has(canvas:not([hidden])) #console { display: none; }
+      .jvm-display-hint { position: absolute; inset: auto 0 16px; text-align: center; color: #fff; font: 14px system-ui; pointer-events: none; }
+      .stderr { color: var(--err); }
+    </style>
+  </head>
+  <body>
+    <div id="screen"></div>
+    <pre id="console"></pre>
+    <script type="module" src="/src/jvm/console.ts"></script>
+  </body>
+</html>

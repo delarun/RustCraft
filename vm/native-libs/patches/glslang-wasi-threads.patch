@@ -1,0 +1,12 @@
+--- glslang/glslang/Include/Common.h.orig	2026-10-21 18:31:17.095453694 +0400
++++ glslang/glslang/Include/Common.h	2026-10-21 18:31:17.110660231 +0400
+@@ -95,7 +95,8 @@
+ #endif
+ 
+ // Allow compilation to WASI which does not support threads yet.
+-#ifdef __wasi__
++// (wasm-libs patch: keep thread support on wasm32-wasip1-threads, where -pthread defines _REENTRANT)
++#if defined(__wasi__) && !defined(_REENTRANT)
+ #define DISABLE_THREAD_SUPPORT
+ #endif
+ 

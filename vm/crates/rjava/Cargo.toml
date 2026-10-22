@@ -1,0 +1,18 @@
+[package]
+name = "rjava"
+description = "Command-line launcher for the jvm crate (native builds)"
+edition.workspace = true
+version.workspace = true
+
+[dependencies]
+jvm.workspace = true
+
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+jit-wasmtime.workspace = true
+
+[target.'cfg(target_family = "wasm")'.dependencies]
+jit-web.workspace = true
+
+[target.'cfg(target_os = "linux")'.dependencies]
+libc = "0.2"
+backtrace = "0.3"

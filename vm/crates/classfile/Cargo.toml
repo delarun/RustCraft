@@ -1,0 +1,9 @@
+[package]
+name = "classfile"
+description = "Java class file parser"
+edition.workspace = true
+version.workspace = true
+
+[dev-dependencies]
+jimage.workspace = true
+zip = { version = "9", default-features = false, features = ["deflate"] }

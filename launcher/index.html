@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RustCraft - Java in Browser - Native Minecraft</title>
+    <meta name="description" content="Run your own copy of Minecraft: Java Edition in the browser on a Java virtual machine written in Rust. Not an official Minecraft product." />
+    <meta name="color-scheme" content="dark light" />
+    <meta name="theme-color" content="#11151a" />
+    <link rel="canonical" href="https://rustcraft.online/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://rustcraft.online/" />
+    <meta property="og:title" content="RustCraft - Java in Browser - Native Minecraft" />
+    <meta property="og:description" content="Run your own copy of Minecraft: Java Edition in the browser on a Java virtual machine written in Rust. Not an official Minecraft product." />
+    <link rel="icon" href="data:," />
+  </head>
+  <body>
+    <div class="page" id="launcher">
+      <header class="topbar">
+        <div class="brand">
+          <span class="mark" aria-hidden="true"></span>
+          <div>
+            <h1 id="product-name">RustCraft - Java in Browser - Native Minecraft</h1>
+            <p class="tagline" data-i18n="tagline"></p>
+          </div>
+        </div>
+        <label class="lang">
+          <span class="sr-only" data-i18n="language"></span>
+          <select id="lang" data-i18n-label="language"></select>
+        </label>
+      </header>
+
+      <div class="alert" id="blocking" role="alert" hidden></div>
+
+      <main class="layout">
+        <section class="card account-card" aria-labelledby="account-title">
+          <h2 id="account-title" data-i18n="accountTitle"></h2>
+
+          <div id="account-signed-out" class="stack">
+            <p class="muted" data-i18n="accountIntro"></p>
+            <p class="notice" id="no-client-id" data-i18n="noClientIdNotice" hidden></p>
+            <button id="login" class="button primary wide" data-i18n="signIn"></button>
+          </div>
+
+          <div id="account-device" class="device" hidden>
+            <p class="device-step">
+              <span data-i18n="deviceOpenBefore"></span>
+              <a id="device-link" target="_blank" rel="noopener noreferrer"></a>
+              <span data-i18n="deviceOpenAfter"></span>
+            </p>
+            <div class="device-code-row">
+              <code id="device-code" class="device-code"></code>
+              <button id="device-copy" class="button ghost" data-i18n="copy"></button>
+            </div>
+            <div class="device-footer">
+              <span class="spinner" aria-hidden="true"></span>
+              <span class="muted small" id="device-expiry"></span>
+              <button id="device-cancel" class="button ghost small" data-i18n="cancel"></button>
+            </div>
+          </div>
+
+          <div id="account-signed-in" hidden>
+            <div class="profile">
+              <span class="avatar" id="profile-avatar" aria-hidden="true"></span>
+              <div class="profile-text">
+                <strong id="profile-name"></strong>
+                <span class="muted mono" id="profile-uuid"></span>
+              </div>
+              <button id="logout" class="button ghost small" data-i18n="signOut"></button>
+            </div>
+            <p class="status" id="license"></p>
+          </div>
+
+          <p class="status" id="account-status"></p>
+        </section>
+
+        <section class="card launch-card" aria-labelledby="play-title">
+          <h2 id="play-title" data-i18n="playTitle"></h2>
+          <div class="field">
+            <label for="version" class="label" data-i18n="versionTitle"></label>
+            <div class="version-row">
+              <select id="version" data-i18n-label="versionAria"></select>
+              <label class="switch">
+                <input type="checkbox" id="snapshots" />
+                <span class="track" aria-hidden="true"></span>
+                <span data-i18n="snapshots"></span>
+              </label>
+            </div>
+            <p class="status" id="compat"></p>
+          </div>
+
+          <label class="check eula">
+            <input type="checkbox" id="eula" />
+            <span data-i18n-html="eulaHtml"></span>
+          </label>
+
+          <div class="alert warn" id="feature-warning" hidden></div>
+
+          <button id="play" class="button play" disabled data-i18n="play"></button>
+          <p class="status hint" id="play-hint"></p>
+
+          <div class="progress" id="progress" hidden>
+            <div class="bar"><div class="fill" id="progress-fill"></div></div>
+            <p class="small muted" id="progress-text"></p>
+          </div>
+          <p class="status" id="status"></p>
+          <details id="failures" hidden>
+            <summary data-i18n="failuresSummary"></summary>
+            <pre id="failures-list"></pre>
+          </details>
+          <div class="row actions">
+            <button id="verify" class="button ghost small" data-i18n="verifyFiles"></button>
+            <button id="cancel" class="button ghost small" data-i18n="cancel" hidden></button>
+          </div>
+        </section>
+
+        <section class="card settings-card" aria-labelledby="settings-title">
+          <h2 id="settings-title" data-i18n="settingsTitle"></h2>
+          <div class="setting">
+            <label for="memory" data-i18n="memoryLabel"></label>
+            <select id="memory">
+              <option value="1024" data-i18n="memory1g"></option>
+              <option value="1536" data-i18n="memory15g"></option>
+              <option value="2048" data-i18n="memory2g"></option>
+            </select>
+          </div>
+
+          <details class="group">
+            <summary data-i18n="signInSettings"></summary>
+            <label for="client-id" class="label" data-i18n="clientIdLabel"></label>
+            <div class="inline-input">
+              <input id="client-id" type="text" spellcheck="false" autocomplete="off" />
+              <button id="client-id-save" class="button ghost small" data-i18n="save"></button>
+            </div>
+            <p class="status" id="client-id-note"></p>
+          </details>
+
+          <details class="group">
+            <summary data-i18n="storageTitle"></summary>
+            <p id="storage" class="small"></p>
+            <p class="muted small" data-i18n="storageNote"></p>
+            <div class="row">
+              <button id="clear" class="button ghost small" data-i18n="clearDownloads"></button>
+              <button id="clear-all" class="button ghost small danger" data-i18n="clearAll"></button>
+            </div>
+          </details>
+
+          <details class="group" id="system">
+            <summary data-i18n="systemCheckTitle"></summary>
+            <p class="small" id="system-summary"></p>
+            <ul class="checks" id="env"></ul>
+          </details>
+
+          <details class="group" id="plan" hidden>
+            <summary data-i18n="planTitle"></summary>
+            <dl id="plan-summary"></dl>
+            <details>
+              <summary data-i18n="planArgv"></summary>
+              <pre id="plan-argv"></pre>
+            </details>
+          </details>
+        </section>
+      </main>
+
+      <footer class="footer">
+        <section class="privacy" aria-labelledby="privacy-title">
+          <h2 id="privacy-title" data-i18n="privacyTitle"></h2>
+          <ul>
+            <li data-i18n-html="privacySignInHtml"></li>
+            <li data-i18n-html="privacyTokensHtml"></li>
+            <li data-i18n-html="privacyFilesHtml"></li>
+            <li data-i18n-html="privacySettingsHtml"></li>
+          </ul>
+        </section>
+        <p class="disclaimer" id="disclaimer" lang="en">NOT AN OFFICIAL MINECRAFT PRODUCT. NOT APPROVED BY OR ASSOCIATED WITH MOJANG OR MICROSOFT.</p>
+        <p class="disclaimer-local" id="disclaimer-local" hidden></p>
+        <p class="small muted" data-i18n-html="footerHtml"></p>
+      </footer>
+    </div>
+
+    <div id="game" hidden>
+      <div id="screen"></div>
+      <pre id="console"></pre>
+      <button id="stop" class="button ghost small" data-i18n="stop"></button>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

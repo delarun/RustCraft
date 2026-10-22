@@ -1,0 +1,4 @@
+# The browser build: the VM's memory (Java heap, thread stacks, native
+# allocations) may grow to the full 4 GiB a wasm32 memory allows.
+[target.wasm32-wasip1-threads]
+rustflags = ["-C", "link-arg=--max-memory=4294967296"]

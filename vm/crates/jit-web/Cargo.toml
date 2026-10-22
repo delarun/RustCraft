@@ -1,0 +1,12 @@
+[package]
+name = "jit-web"
+description = "Browser backend for the JIT: runs compiled WebAssembly through the JS API, in the VM's own memory"
+edition.workspace = true
+version.workspace = true
+
+[dependencies]
+jvm.workspace = true
+
+[lints.rust]
+# rjava_stub: a test build whose platform imports are linked-in stubs.
+unexpected_cfgs = { level = "warn", check-cfg = ["cfg(rjava_stub)"] }

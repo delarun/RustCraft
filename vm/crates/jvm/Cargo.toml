@@ -1,0 +1,24 @@
+[package]
+name = "jvm"
+description = "Java virtual machine runtime"
+edition.workspace = true
+version.workspace = true
+
+[dependencies]
+classfile.workspace = true
+jimage.workspace = true
+miniz_oxide = "0.9"
+wasm-encoder = "0.262"
+wasmparser = { version = "0.262", default-features = false, features = ["std"] }
+zip = { version = "9", default-features = false, features = ["deflate"] }
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+libffi = { version = "5", features = ["system"] }
+
+[dev-dependencies]
+jit-wasmtime.workspace = true
+
+[lints.rust]
+# rjava_stub: a test build whose platform imports are linked-in stubs.
+unexpected_cfgs = { level = "warn", check-cfg = ["cfg(rjava_stub)"] }
