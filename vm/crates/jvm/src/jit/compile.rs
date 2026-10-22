@@ -128,9 +128,9 @@ pub enum CallSite {
     /// The target is known and has bytecode: through the table.
     Direct(MethodRef),
     /// invokevirtual/invokeinterface with a resolved method: inline cache,
-    /// filled by the `select` import. With the receiver class and target
-    /// the interpreter last saw there, if any (to inline it, guarded).
-    Virtual(Option<(u32, MethodRef)>),
+    /// filled by the `select` import. With receiver classes and their
+    /// targets seen there (the interpreter's first), to inline them, guarded.
+    Virtual(Vec<(u32, MethodRef)>),
     /// MethodHandle.invokeBasic / linkTo*: the target method is read from
     /// the handle or MemberName (field offsets: MethodHandle.form,
     /// LambdaForm.vmentry, MemberName.method, ResolvedMethodName.vmtarget).
@@ -142,6 +142,13 @@ pub enum CallSite {
     Linked(MethodRef, Option<u32>),
     /// Anything else: the `invoke` import.
     Generic,
+}
+
+/// What `Gen::inline_candidate` found to inline for a call.
+enum Inline {
+    Direct(MethodRef),
+    /// Targets with the receiver classes seen dispatching to each.
+    Guarded(Vec<(MethodRef, Vec<u32>)>),
 }
 
 /// Class id for `select` meaning "no virtual dispatch".
@@ -268,6 +275,7 @@ pub fn compile(
     macro_rules! new_gen {
         ($call_site:expr, $entry_dirty:expr) => {
     Gen {
+        root: method,
         c: Ctx {
             method,
             code: bytes,
@@ -910,6 +918,8 @@ struct Inlined {
 
 struct Gen<'a> {
     c: Ctx,
+    /// The method being compiled (`c.method` is the inlined one, if any).
+    root: MethodRef,
     f: Function,
     /// The compilation tier (see `super::MethodJit::tier`).
     tier: u8,
@@ -1596,7 +1606,7 @@ impl Gen<'_> {
             // A real call: the frame must be current.
             self.sync_locals(true);
         }
-        let Some((target, guard)) = inline else {
+        let Some(inline) = inline else {
             self.emit_call(pc, &site, depth, args, receiver_is_this);
             self.ins().if_(BlockType::Empty).i32_const(STATUS_EXCEPTION).return_().end();
             self.unmaterialize();
@@ -1604,12 +1614,16 @@ impl Gen<'_> {
             return Ok(true);
         };
         let null_check = op != INVOKESTATIC && !receiver_is_this;
-        if guard.is_none() && !null_check {
-            // Known target, receiver (if any) non-null: just the callee's code.
-            return self.inline_call(pc, target, args).map(|()| true);
-        }
-        // Guarded: inlined if the receiver is non-null (and of the expected
-        // class), else a real call; the result goes through memory.
+        let (variants, guarded) = match inline {
+            Inline::Direct(target) if !null_check => {
+                // Known target, receiver (if any) non-null: just the callee's code.
+                return self.inline_call(pc, target, args).map(|()| true);
+            }
+            Inline::Direct(target) => (vec![(target, Vec::new())], false),
+            Inline::Guarded(variants) => (variants, true),
+        };
+        // Guarded: inlined if the receiver is non-null (and dispatches to an
+        // inlined target), else a real call; the result goes through memory.
         self.save_pc(pc);
         let receiver_slot = self.slot_offset(args);
         if null_check {
@@ -1618,26 +1632,33 @@ impl Gen<'_> {
             self.emit_generic_invoke(pc, depth);
             self.ins().else_();
         }
-        let counters = guard.and_then(|_| self.site_counters(pc, true, target));
-        if let Some(class) = guard {
+        let counters = if guarded { self.site_counters(pc, true, variants[0].0) } else { None };
+        let which = self.scratch_i32() + 1;
+        if guarded {
             self.count(counters, 0);
-            self.ins()
-                .local_get(FP)
-                .i32_load(mem(receiver_slot, 2))
-                .i32_load(mem(0, 2))
-                .i32_const(class as i32)
-                .i32_eq()
-                .if_(BlockType::Result(ValType::I32));
+            self.select_variant(pc, receiver_slot, &variants);
         }
-        self.inline_call(pc, target, args)?;
-        self.flush();
-        self.ins().i32_const(STATUS_RETURN);
-        if guard.is_some() {
-            self.ins().else_();
+        let stack = self.stack.clone();
+        for (i, &(target, _)) in variants.iter().enumerate() {
+            if guarded {
+                self.ins().local_get(which).i32_const(i as i32).i32_eq().if_(BlockType::Result(ValType::I32));
+            }
+            self.stack.clone_from(&stack);
+            self.inline_call(pc, target, args)?;
+            self.flush();
+            self.ins().i32_const(STATUS_RETURN);
+            if guarded {
+                self.ins().else_();
+            }
+        }
+        if guarded {
             self.count(counters, 1);
+            self.report_misses(pc, variants.len());
             self.sync_locals(false);
             self.emit_call(pc, &site, depth, args, receiver_is_this);
-            self.ins().end();
+            for _ in &variants {
+                self.ins().end();
+            }
         }
         if null_check {
             self.ins().end();
@@ -1646,6 +1667,82 @@ impl Gen<'_> {
         self.unmaterialize();
         self.stack = vec![Entry::Mem; depth - pops + pushes];
         Ok(true)
+    }
+
+    /// Sets scratch local 1 to the index of the variant (inlined target)
+    /// that the receiver (at `receiver_slot`) of the virtual call at `pc`
+    /// dispatches to, or -1; scratch local 0 is its class. A variant matches
+    /// the classes seen for it, the class last found to dispatch to it too
+    /// (subclasses that do not override it, implementations sharing a
+    /// default method), or what the dispatch cache says.
+    fn select_variant(&mut self, pc: usize, receiver_slot: usize, variants: &[(MethodRef, Vec<u32>)]) {
+        let class = self.scratch_i32();
+        let which = class + 1;
+        let others: Vec<u32> = variants.iter().map(|_| self.inline_cache().0).collect();
+        self.ins().local_get(FP).i32_load(mem(receiver_slot, 2)).i32_load(mem(0, 2)).local_set(class);
+        for (i, (_, classes)) in variants.iter().enumerate() {
+            self.ins().local_get(class).global_get(others[i]).i32_eq();
+            for &seen in classes {
+                self.ins().local_get(class).i32_const(seen as i32).i32_eq().i32_or();
+            }
+            self.ins().if_(BlockType::Empty).i32_const(i as i32).local_set(which).else_();
+        }
+        self.sync_locals(false);
+        let Some(Resolved::Method(resolved)) = self.method.class().cp_cache[self.u2(pc + 1) as usize].get() else {
+            unreachable!("virtual call sites are resolved")
+        };
+        let key = class + 2;
+        self.ins().i32_const(resolved.global_index as i32).local_set(key);
+        self.dispatch(class, key);
+        self.ins().local_set(key).i32_const(-1).local_set(which);
+        for (i, (target, _)) in variants.iter().enumerate() {
+            self.ins()
+                .local_get(key)
+                .i32_const(target.global_index as i32)
+                .i32_eq()
+                .if_(BlockType::Empty)
+                .i32_const(i as i32)
+                .local_set(which)
+                .local_get(class)
+                .global_set(others[i])
+                .end();
+        }
+        for _ in variants {
+            self.ins().end();
+        }
+    }
+
+    /// In the call path of a guarded site (none of its `variants` matched;
+    /// scratch local 0 is the receiver's class): counts the miss and at the
+    /// threshold reports the class (`pure` REPROFILE, see `super::profile`).
+    fn report_misses(&mut self, pc: usize, variants: usize) {
+        let threshold = super::profile::threshold();
+        if threshold == 0 || variants >= 3 || self.root.jit.version.load(std::sync::atomic::Ordering::Relaxed) >= super::MAX_RECOMPILES {
+            return;
+        }
+        let Some(Resolved::Method(resolved)) = self.method.class().cp_cache[self.u2(pc + 1) as usize].get() else {
+            return;
+        };
+        let id = super::profile::register(self.c.method, pc, resolved, self.root);
+        let (misses, _) = self.inline_cache(); // starts at -1
+        let class = self.scratch_i32();
+        let count = class + 2;
+        self.ins()
+            .global_get(misses)
+            .i32_const(1)
+            .i32_add()
+            .local_tee(count)
+            .global_set(misses)
+            .local_get(count)
+            .i32_const(threshold as i32 - 1)
+            .i32_eq()
+            .if_(BlockType::Empty)
+            .i32_const(super::pure::REPROFILE as i32)
+            .i32_const(id as i32)
+            .local_get(class)
+            .call(FN_PURE)
+            .drop()
+            .end();
     }
 
     /// The `invoke` import for the call at `pc` (pushes its status).
@@ -1797,20 +1894,36 @@ impl Gen<'_> {
         }
     }
 
-    /// The method to inline for a call (and the receiver class it is only
-    /// valid for), if any: small, straight-line or forward-branching, no
-    /// handlers, within the nesting and size budgets.
-    fn inline_candidate(&self, site: &CallSite, args: usize) -> Option<(MethodRef, Option<u32>)> {
+    /// The methods to inline for a call, if any: the target of a direct
+    /// call, or up to three targets of a virtual call, each with the receiver
+    /// classes seen to dispatch to it (the guard).
+    fn inline_candidate(&self, site: &CallSite, args: usize) -> Option<Inline> {
         let limits = inline_limits(self.tier);
         if self.inlined.len() >= limits.depth.min(self.inline_levels) || self.inlined_bytes >= limits.bytes {
             return None;
         }
-        let (target, guard) = match *site {
-            CallSite::Direct(target) => (target, None),
-            CallSite::Virtual(Some((class, target))) => (target, Some(class)),
-            _ => return None,
-        };
-        let code = target.code.as_ref()?;
+        match site {
+            CallSite::Direct(target) => self.inlinable(target, args).then_some(Inline::Direct(target)),
+            CallSite::Virtual(seen) => {
+                let mut variants: Vec<(MethodRef, Vec<u32>)> = Vec::new();
+                for &(class, target) in seen {
+                    if let Some((_, classes)) = variants.iter_mut().find(|(t, _)| std::ptr::eq(*t, target)) {
+                        classes.push(class);
+                    } else if variants.len() < 3 && self.inlinable(target, args) {
+                        variants.push((target, vec![class]));
+                    }
+                }
+                (!variants.is_empty()).then_some(Inline::Guarded(variants))
+            }
+            _ => None,
+        }
+    }
+
+    /// Whether `target` may be inlined here: small, straight-line or
+    /// forward-branching, no handlers, not recursive, fits the frame.
+    fn inlinable(&self, target: MethodRef, args: usize) -> bool {
+        let limits = inline_limits(self.tier);
+        let Some(code) = target.code.as_ref() else { return false };
         let recursive = std::ptr::eq(target, self.c.method) || self.inlined.iter().any(|f| std::ptr::eq(f.method, target));
         let fits = self.c.op_base + args + code.max_locals as usize + code.max_stack as usize + 2 <= self.operand_slots;
         let simple = code.code.len() <= limits.size
@@ -1818,7 +1931,7 @@ impl Gen<'_> {
             && code.max_locals as usize <= MAX_INLINE_LOCALS
             && target.access_flags & classfile::access::SYNCHRONIZED == 0
             && forward_only(&code.code);
-        (simple && fits && !recursive).then_some((target, guard))
+        simple && fits && !recursive
     }
 
     /// Generates `target`'s code in place of a call whose arguments are in
@@ -2039,6 +2152,76 @@ impl Gen<'_> {
         self.push(t);
     }
 
+    /// Replaces the Int/Long/Short/Char value on the wasm stack by its bytes
+    /// in reverse order if the operand `flag` (boolean) is set (Unsafe's
+    /// big-endian accesses; wasm is little-endian). Short is sign-extended.
+    fn swap_if_flag(&mut self, kind: &str, flag: usize) {
+        let value = self.scratch_i32() + 1;
+        let half = value + 1;
+        let wide = self.scratch_i64(0);
+        let bswap32 = |g: &mut Self, l: u32| {
+            g.ins()
+                .local_get(l)
+                .i32_const(24)
+                .i32_shl()
+                .local_get(l)
+                .i32_const(8)
+                .i32_shl()
+                .i32_const(0xFF_0000)
+                .i32_and()
+                .i32_or()
+                .local_get(l)
+                .i32_const(8)
+                .i32_shr_u()
+                .i32_const(0xFF00)
+                .i32_and()
+                .i32_or()
+                .local_get(l)
+                .i32_const(24)
+                .i32_shr_u()
+                .i32_or();
+        };
+        if kind == "Long" {
+            self.ins().local_set(wide).local_get(wide).i32_wrap_i64().local_set(half);
+            bswap32(self, half);
+            self.ins()
+                .i64_extend_i32_u()
+                .i64_const(32)
+                .i64_shl()
+                .local_get(wide)
+                .i64_const(32)
+                .i64_shr_u()
+                .i32_wrap_i64()
+                .local_set(half);
+            bswap32(self, half);
+            self.ins().i64_extend_i32_u().i64_or().local_get(wide);
+        } else {
+            self.ins().local_set(value);
+            if kind == "Int" {
+                bswap32(self, value);
+            } else {
+                self.ins()
+                    .local_get(value)
+                    .i32_const(0xFF)
+                    .i32_and()
+                    .i32_const(8)
+                    .i32_shl()
+                    .local_get(value)
+                    .i32_const(8)
+                    .i32_shr_u()
+                    .i32_const(0xFF)
+                    .i32_and()
+                    .i32_or();
+                if kind == "Short" {
+                    self.ins().i32_const(16).i32_shl().i32_const(16).i32_shr_s();
+                }
+            }
+            self.ins().local_get(value);
+        }
+        self.get(flag, T::I32);
+        self.ins().select();
+    }
+
     /// Unsafe.compareAndSet{Int,Long,Reference} as an atomic compare-exchange
     /// (wasm only, like `inline_unsafe`).
     fn inline_cas(&mut self, m: MethodRef, kind: &str) -> bool {
@@ -2194,6 +2377,12 @@ impl Gen<'_> {
                 call(self);
                 self.ins().end().local_set(result);
             }
+            ARRAYCOPY => {
+                let slots = self.slot_offset(args);
+                self.ins().local_get(FP).i32_const(slots as i32).i32_add().local_set(a);
+                call(self);
+                self.ins().local_set(result);
+            }
             _ => {
                 call(self);
                 self.ins().local_set(result);
@@ -2214,6 +2403,8 @@ impl Gen<'_> {
             (INVOKEVIRTUAL, "java/lang/Object", "hashCode", "()I") => (OBJECT_HASH, 1),
             (INVOKEVIRTUAL, "java/lang/Class", "isInstance", "(Ljava/lang/Object;)Z") => (IS_INSTANCE, 2),
             (INVOKEVIRTUAL, "jdk/internal/misc/Unsafe", "allocateInstance", "(Ljava/lang/Class;)Ljava/lang/Object;") => (ALLOCATE_INSTANCE, 2),
+            // The arguments are read from the frame (see ARRAYCOPY).
+            (INVOKESTATIC, "java/lang/System", "arraycopy", "(Ljava/lang/Object;ILjava/lang/Object;II)V") => (ARRAYCOPY, 0),
             _ => return None,
         })
     }
@@ -2229,10 +2420,17 @@ impl Gen<'_> {
         let index = self.u2(pc + 1);
         let Some(Resolved::Method(m)) = self.method.class().cp_cache[index as usize].get() else { return false };
         let m = *m;
-        if m.class().name != "jdk/internal/misc/Unsafe" || !m.is_native() || m.is_static() {
+        if m.class().name != "jdk/internal/misc/Unsafe" || m.is_static() {
             return false;
         }
         let name = m.name.as_str();
+        // get/put{Int,Long,Short,Char}Unaligned (Java code, with an optional
+        // big-endian flag): wasm loads and stores need no alignment.
+        let (name, unaligned) = match name.strip_suffix("Unaligned") {
+            Some(name) => (name, true),
+            None if m.is_native() => (name, false),
+            None => return false,
+        };
         if let Some(kind) = name.strip_prefix("compareAndSet") {
             return self.inline_cas(m, kind);
         }
@@ -2244,9 +2442,12 @@ impl Gen<'_> {
             return false;
         };
         let (kind, volatile) = match rest.strip_suffix("Volatile") {
-            Some(kind) => (kind, true),
-            None => (rest, false),
+            Some(kind) if !unaligned => (kind, true),
+            _ => (rest, false),
         };
+        if unaligned && !matches!(kind, "Int" | "Long" | "Short" | "Char") {
+            return false;
+        }
         use T::*;
         let (t, desc) = match kind {
             "Int" => (I32, "I"),
@@ -2260,12 +2461,15 @@ impl Gen<'_> {
             "Reference" => (I32, "Ljava/lang/Object;"),
             _ => return false,
         };
+        let flagged = if get { format!("(Ljava/lang/Object;JZ){desc}") } else { format!("(Ljava/lang/Object;J{desc}Z)V") };
         let expected = if get { format!("(Ljava/lang/Object;J){desc}") } else { format!("(Ljava/lang/Object;J{desc})V") };
-        if m.descriptor != expected {
+        // With a big-endian flag: the bytes swapped when it is set.
+        let swap = unaligned && m.descriptor == flagged;
+        if m.descriptor != expected && !swap {
             return false;
         }
         let width = if matches!(t, I64 | F64) { 2 } else { 1 };
-        let receiver = self.top(if get { 4 } else { 4 + width });
+        let receiver = self.top(if get { 4 } else { 4 + width } + swap as usize);
         let (base, offset) = (receiver + 1, receiver + 2);
         let region = MEMORY_BASE.load(std::sync::atomic::Ordering::Relaxed) as i32;
         let address = self.scratch_i32();
@@ -2301,6 +2505,9 @@ impl Gen<'_> {
             if volatile {
                 self.ins().atomic_fence();
             }
+            if swap {
+                self.swap_if_flag(kind, offset + 2);
+            }
             self.stack.truncate(receiver);
             self.push(t);
         } else {
@@ -2310,6 +2517,9 @@ impl Gen<'_> {
             }
             self.ins().local_get(address);
             self.get(value, t);
+            if swap {
+                self.swap_if_flag(kind, value + width);
+            }
             match kind {
                 "Int" | "Reference" => self.ins().i32_store(at(0)),
                 "Long" => self.ins().i64_store(at(0)),

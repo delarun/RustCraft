@@ -129,6 +129,27 @@ fn system_map_library_name(t: &mut Thread<'_>, a: &[u64]) -> JResult<Option<u64>
     ret_ref(t.new_string(&mapped)?)
 }
 
+/// System.arraycopy when it cannot fail and needs no element checks: arrays
+/// of one element kind (references: the source's class a subclass of the
+/// destination's), positions and length in bounds. False: nothing done.
+pub(crate) fn arraycopy_unchecked(vm: &crate::vm::Vm, src: Ref, src_pos: i32, dst: Ref, dst_pos: i32, length: i32) -> bool {
+    if src.is_null() || dst.is_null() || (src_pos | dst_pos | length) < 0 {
+        return false;
+    }
+    let (src_class, dst_class) = (vm.class_of(src), vm.class_of(dst));
+    let (Some(kind), Some(dst_kind)) = (src_class.element_kind(), dst_class.element_kind()) else { return false };
+    if kind != dst_kind || (kind == FieldKind::Ref && !std::ptr::eq(src_class, dst_class) && !src_class.is_subclass_of(dst_class)) {
+        return false;
+    }
+    let heap = &vm.heap;
+    if src_pos as i64 + length as i64 > heap.array_length(src) as i64 || dst_pos as i64 + length as i64 > heap.array_length(dst) as i64 {
+        return false;
+    }
+    let size = kind.size();
+    heap.copy(src, ARRAY_BASE_OFFSET + src_pos as u32 * size, dst, ARRAY_BASE_OFFSET + dst_pos as u32 * size, (length as u32 * size) as usize);
+    true
+}
+
 fn system_arraycopy(t: &mut Thread<'_>, a: &[u64]) -> JResult<Option<u64>> {
     let (src, src_pos, dst, dst_pos, length) = (arg_ref(a, 0), arg_i(a, 1), arg_ref(a, 2), arg_i(a, 3), arg_i(a, 4));
     if src.is_null() || dst.is_null() {

@@ -228,3 +228,33 @@ fn pure_natives() {
 fn pure_natives_jit() {
     check("PureNatives", true);
 }
+
+#[test]
+fn polymorphic() {
+    check("Polymorphic", false);
+}
+
+#[test]
+fn polymorphic_jit() {
+    check("Polymorphic", true);
+}
+
+#[test]
+fn array_copy() {
+    check("ArrayCopy", false);
+}
+
+#[test]
+fn array_copy_jit() {
+    check("ArrayCopy", true);
+}
+
+#[test]
+fn unaligned() {
+    check("Unaligned", false);
+}
+
+#[test]
+fn unaligned_jit() {
+    check("Unaligned", true);
+}

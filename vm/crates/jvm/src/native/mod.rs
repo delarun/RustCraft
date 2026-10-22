@@ -23,6 +23,7 @@ mod unsafe_;
 mod zip;
 
 pub(crate) use invoke::{member_name_method, unbox_value};
+pub(crate) use lang::arraycopy_unchecked;
 pub(crate) use thread::THREAD_STATUS_RUNNABLE;
 
 use crate::class::ClassRef;

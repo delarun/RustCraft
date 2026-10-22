@@ -128,6 +128,22 @@ impl MethodJit {
     }
 }
 
+/// RJAVA_JIT_SYNC: compile on the thread that asks.
+fn sync() -> bool {
+    static SYNC: OnceLock<bool> = OnceLock::new();
+    *SYNC.get_or_init(|| std::env::var_os("RJAVA_JIT_SYNC").is_some())
+}
+
+/// Compiles an already compiled method again (see `Queue::resubmit`).
+fn recompile(vm: &crate::vm::Vm, method: crate::class::MethodRef) {
+    let version = method.jit.next_version();
+    if let Some(code) = crate::interp::compile_method(vm, method) {
+        method.jit.recompiled.store(Box::leak(Box::new(code)), Ordering::Release);
+        method.jit.version.store(version, Ordering::Release);
+    }
+    method.jit.recompile_queued.store(false, Ordering::Relaxed);
+}
+
 /// Times a method may be compiled again (see `MethodJit::recompiled`).
 pub const MAX_RECOMPILES: u32 = 3;
 
@@ -155,17 +171,19 @@ impl Queue {
         {
             return;
         }
+        if sync() {
+            recompile(vm, method);
+            return;
+        }
         self.pending.lock().unwrap().push_back(method);
         self.cond.notify_one();
-        let _ = vm;
     }
 
     pub fn submit(&self, vm: &'static crate::vm::Vm, method: crate::class::MethodRef) {
         if method.jit.queued.swap(true, Ordering::Relaxed) {
             return;
         }
-        static SYNC: OnceLock<bool> = OnceLock::new();
-        if *SYNC.get_or_init(|| std::env::var_os("RJAVA_JIT_SYNC").is_some()) {
+        if sync() {
             let _ = method.jit.code.set(crate::interp::compile_method(vm, method));
             return;
         }
@@ -199,12 +217,7 @@ impl Queue {
                 }
             };
             if method.jit.code.get().is_some() {
-                let version = method.jit.next_version();
-                if let Some(code) = crate::interp::compile_method(vm, method) {
-                    method.jit.recompiled.store(Box::leak(Box::new(code)), Ordering::Release);
-                    method.jit.version.store(version, Ordering::Release);
-                }
-                method.jit.recompile_queued.store(false, Ordering::Relaxed);
+                recompile(vm, method);
             } else {
                 let _ = method.jit.code.set(crate::interp::compile_method(vm, method));
             }
@@ -304,6 +317,83 @@ pub mod pure {
     pub const ARRAY_STORE_CHECK: u32 = 6;
     /// Method a (a global index) became hot: compile it as tier 2.
     pub const TIER_UP: u32 = 7;
+    /// The inlined virtual call site a (see `super::profile`) missed its
+    /// targets often, lately for receivers of class id b.
+    pub const REPROFILE: u32 = 8;
+    /// System.arraycopy with its five arguments in the frame slots at region
+    /// offset a: 0 if copied, else -1 (exceptions, element checks).
+    pub const ARRAYCOPY: u32 = 9;
+}
+
+/// Polymorphic inlining: a virtual call site with inlined targets counts the
+/// calls none of them matched; after `threshold()` of them it reports the
+/// receiver's class (`pure` REPROFILE), whose target becomes another
+/// candidate of the site, and the method is compiled again with it.
+pub mod profile {
+    use crate::class::MethodRef;
+    use std::collections::HashMap;
+    use std::sync::{Mutex, OnceLock};
+
+    /// Targets a site may inline besides the interpreter's hint.
+    const MAX_EXTRA: usize = 2;
+
+    struct Site {
+        method: MethodRef,
+        pc: u32,
+        /// The method the instruction names.
+        resolved: MethodRef,
+        /// The compiled method the site's code is part of.
+        root: MethodRef,
+    }
+
+    static SITES: Mutex<Vec<Site>> = Mutex::new(Vec::new());
+    static TARGETS: OnceLock<Mutex<HashMap<(u32, u32), Vec<(u32, MethodRef)>>>> = OnceLock::new();
+
+    fn targets() -> &'static Mutex<HashMap<(u32, u32), Vec<(u32, MethodRef)>>> {
+        TARGETS.get_or_init(Default::default)
+    }
+
+    /// Misses before a site reports (RJAVA_JIT_REPROFILE; 0: never).
+    pub fn threshold() -> u32 {
+        static THRESHOLD: OnceLock<u32> = OnceLock::new();
+        *THRESHOLD.get_or_init(|| std::env::var("RJAVA_JIT_REPROFILE").ok().and_then(|v| v.parse().ok()).unwrap_or(1000))
+    }
+
+    /// Registers a site of compiled code; its id for REPROFILE.
+    pub fn register(method: MethodRef, pc: usize, resolved: MethodRef, root: MethodRef) -> u32 {
+        let mut sites = SITES.lock().unwrap();
+        sites.push(Site { method, pc: pc as u32, resolved, root });
+        (sites.len() - 1) as u32
+    }
+
+    /// (receiver class id, target) found at the call instruction at `pc`.
+    pub fn extra_targets(method: MethodRef, pc: usize) -> Vec<(u32, MethodRef)> {
+        targets().lock().unwrap().get(&(method.global_index, pc as u32)).cloned().unwrap_or_default()
+    }
+
+    /// REPROFILE: adds the target for receivers of class `class` to the
+    /// site's candidates and compiles its method again.
+    pub fn missed(vm: &crate::vm::Vm, id: u32, class: u32) {
+        let (method, pc, resolved, root) = match SITES.lock().unwrap().get(id as usize) {
+            Some(site) => (site.method, site.pc, site.resolved, site.root),
+            None => return,
+        };
+        let Ok(target) = vm.select_method(vm.class_by_id(class), resolved) else { return };
+        if !crate::interp::directly_callable(vm, target) {
+            return;
+        }
+        {
+            let mut targets = targets().lock().unwrap();
+            let list = targets.entry((method.global_index, pc)).or_default();
+            if !list.iter().any(|&(_, t)| std::ptr::eq(t, target)) {
+                if list.len() >= MAX_EXTRA {
+                    return;
+                }
+                list.push((class, target));
+            }
+        }
+        vm.jit_queue.resubmit(vm.as_static(), root);
+    }
 }
 
 /// Calls of a method's baseline code before it is compiled as tier 2
@@ -364,6 +454,17 @@ pub unsafe fn host_pure(t: *mut (), op: u32, a: u32, b: u32) -> i32 {
             crate::class::ClassKind::Array { component } => vm.class_of(b).is_subclass_of(component) as i32,
             _ => 0,
         },
+        pure::ARRAYCOPY => {
+            // SAFETY: five argument slots of a frame of this thread.
+            let slots = unsafe { std::slice::from_raw_parts(vm.memory.region().base.add(a.0 as usize) as *const u64, 5) };
+            let int = |i: usize| slots[i] as u32 as i32;
+            let copied = crate::native::arraycopy_unchecked(vm, Ref(slots[0] as u32), int(1), Ref(slots[2] as u32), int(3), int(4));
+            if copied { 0 } else { -1 }
+        }
+        pure::REPROFILE => {
+            profile::missed(vm, a.0, b.0);
+            0
+        }
         pure::TIER_UP => {
             if let Some(method) = vm.method_if_any(a.0) {
                 method.jit.tier.store(2, std::sync::atomic::Ordering::Relaxed);

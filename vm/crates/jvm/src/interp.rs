@@ -2278,12 +2278,13 @@ fn jit_call_site(vm: &Vm, method: MethodRef, pc: usize) -> crate::jit::compile::
             _ => CallSite::Generic,
         },
         INVOKEVIRTUAL | INVOKEINTERFACE if !resolved.is_static() => {
-            // What the interpreter's inline cache saw there, to inline it.
+            // What the interpreter's inline cache saw there, and the targets
+            // compiled code found later (`jit::profile`), to inline them.
             let hint = class.call_caches[index as usize]
                 .get()
                 .map(|(class_id, method)| (class_id, vm.method_by_index(method)))
                 .filter(|&(_, target)| directly_callable(vm, target));
-            CallSite::Virtual(hint)
+            CallSite::Virtual(hint.into_iter().chain(crate::jit::profile::extra_targets(method, pc)).collect())
         }
         _ => CallSite::Generic,
     }
