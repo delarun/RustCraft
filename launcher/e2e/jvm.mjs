@@ -6,7 +6,7 @@
 import puppeteer from 'puppeteer-core';
 import { dirname, resolve } from 'node:path';
 
-const URL = process.env.LAUNCHER_URL ?? 'http://localhost:5173/';
+const URL = process.env.LAUNCHER_URL ?? 'http://192.168.10.254:5173/';
 const CHROME = process.env.CHROME ?? '/usr/bin/google-chrome-stable';
 const repo = resolve(dirname(new globalThis.URL(import.meta.url).pathname), '../..');
 // WASM=<path>: another build of rjava.wasm.
@@ -21,7 +21,14 @@ const browser = await puppeteer.launch({
   executablePath: CHROME,
   headless: true,
   // CHROME_FLAGS: extra Chrome flags (e.g. --js-flags=--liftoff-only).
-  args: ['--enable-unsafe-webgpu', '--window-size=1280,1000', ...(process.env.CHROME_FLAGS ?? '').split(' ').filter(Boolean)],
+  args: [
+    '--enable-unsafe-webgpu',
+    '--window-size=1280,1000',
+    // SharedArrayBuffer needs a secure context: a dev server on a LAN address
+    // (not localhost) is treated as one.
+    ...(new globalThis.URL(URL).hostname === 'localhost' ? [] : [`--unsafely-treat-insecure-origin-as-secure=${new globalThis.URL(URL).origin}`]),
+    ...(process.env.CHROME_FLAGS ?? '').split(' ').filter(Boolean),
+  ],
   // SCALE: the device pixel ratio.
   defaultViewport: { width: 1280, height: 1000, deviceScaleFactor: Number(process.env.SCALE ?? 1) },
   protocolTimeout: 0,

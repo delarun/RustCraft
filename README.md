@@ -8,7 +8,7 @@ goes through WebGL2 and sound through Web Audio.
 Website: <https://rustcraft.online>
 
 > **NOT AN OFFICIAL MINECRAFT PRODUCT. NOT APPROVED BY OR ASSOCIATED WITH MOJANG OR MICROSOFT.**
-> Minecraft is a trademark of Mojang Synergies AB. RustCraft does not host or redistribute
+> Minecraft is a trademark of Mojang AB. RustCraft does not host or redistribute
 > any game files. The player's browser downloads them from Mojang's servers, and playing
 > requires your own Minecraft: Java Edition license (Microsoft account sign-in).
 

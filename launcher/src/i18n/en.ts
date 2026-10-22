@@ -207,7 +207,7 @@ export const en = {
   footerNotices: 'Third-party licenses',
   footerEula: 'Minecraft EULA',
   footerTrademark:
-    'Minecraft is a trademark of Mojang Synergies AB. The game files are downloaded from Mojang’s servers; you need your own license to play.',
+    'Minecraft is a trademark of Mojang AB. The game files are downloaded from Mojang’s servers; you need your own license to play.',
 
   /** An untranslated message (e.g. from the network stack). */
   text: (message: S) => message,

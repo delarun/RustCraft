@@ -206,7 +206,7 @@ export const ru: Messages = {
   footerNotices: 'Лицензии стороннего ПО',
   footerEula: 'EULA Minecraft',
   footerTrademark:
-    'Minecraft — торговая марка Mojang Synergies AB. Файлы игры загружаются с серверов Mojang; для игры нужна собственная лицензия.',
+    'Minecraft — торговая марка Mojang AB. Файлы игры загружаются с серверов Mojang; для игры нужна собственная лицензия.',
 
   text: (message: S) => message,
 };
