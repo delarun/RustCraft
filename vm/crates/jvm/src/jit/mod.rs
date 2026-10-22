@@ -307,10 +307,11 @@ pub mod pure {
 }
 
 /// Calls of a method's baseline code before it is compiled as tier 2
-/// (RJAVA_JIT_TIER2=<calls>; 0: no tier 2).
+/// (RJAVA_JIT_TIER2=<calls>, e.g. 20000; 0, the default: no tier 2, which
+/// measured no faster on the integrated server).
 pub fn tier2_threshold() -> u32 {
     static THRESHOLD: OnceLock<u32> = OnceLock::new();
-    *THRESHOLD.get_or_init(|| std::env::var("RJAVA_JIT_TIER2").ok().and_then(|v| v.parse().ok()).unwrap_or(20_000))
+    *THRESHOLD.get_or_init(|| std::env::var("RJAVA_JIT_TIER2").ok().and_then(|v| v.parse().ok()).unwrap_or(0))
 }
 
 /// `vm.pure(op, a, b) -> result or -1`.
@@ -443,6 +444,20 @@ pub mod stats {
         /// compiling it failed).
         pub uncompiled: Mutex<std::collections::HashMap<usize, (u64, crate::class::MethodRef, bool)>>,
         pub compiled_entries: AtomicU64,
+        /// Virtual call sites in compiled code (wasm), with counters that
+        /// the code increments.
+        pub sites: Mutex<Vec<Site>>,
+    }
+
+    /// A virtual call site: an inlined target behind a class guard
+    /// (counters: executions, guard misses), or a call through the site's
+    /// inline cache (counters: calls, cache misses).
+    pub struct Site {
+        pub counters: &'static [std::sync::atomic::AtomicU32; 2],
+        pub guarded: bool,
+        pub caller: crate::class::MethodRef,
+        pub pc: u32,
+        pub target: crate::class::MethodRef,
     }
 
     static ENABLED: AtomicBool = AtomicBool::new(false);
@@ -480,6 +495,7 @@ pub mod stats {
             interpreted_frames: AtomicU64::new(0),
             uncompiled: Mutex::new(Default::default()),
             compiled_entries: AtomicU64::new(0),
+            sites: Mutex::new(Vec::new()),
         })
     }
 
@@ -503,6 +519,33 @@ pub mod stats {
 
     fn take(counter: &AtomicU64) -> u64 {
         counter.swap(0, Relaxed)
+    }
+
+    /// The virtual call sites that missed most (summed over the compiled
+    /// copies of each site).
+    fn report_sites(s: &Stats) -> String {
+        let mut sums: std::collections::HashMap<(usize, u32, bool), (u64, u64, &Site)> = Default::default();
+        let sites = s.sites.lock().unwrap();
+        for site in sites.iter() {
+            let (n, misses) = (site.counters[0].swap(0, Relaxed) as u64, site.counters[1].swap(0, Relaxed) as u64);
+            let entry = sums.entry((&*site.caller as *const _ as usize, site.pc, site.guarded)).or_insert((0, 0, site));
+            entry.0 += n;
+            entry.1 += misses;
+        }
+        let mut out = String::new();
+        for (guarded, title) in [(true, "guard misses (inlined target, other class)"), (false, "inline cache misses (calls)")] {
+            let mut top: Vec<_> = sums.iter().filter(|(k, v)| k.2 == guarded && v.1 > 0).map(|(_, v)| *v).collect();
+            top.sort_by(|a, b| b.1.cmp(&a.1));
+            let total: u64 = top.iter().map(|v| v.1).sum();
+            if total == 0 {
+                continue;
+            }
+            out += &format!("\n    {title}: {total}");
+            for (n, misses, site) in top.iter().take(20) {
+                out += &format!("\n      {misses:>9}/{n:<9} {:?} @{} -> {:?}", site.caller, site.pc, site.target);
+            }
+        }
+        out
     }
 
     fn report() {
@@ -552,6 +595,7 @@ pub mod stats {
                 out += &format!("\n      {count:>9} {method:?}{}", if *failed { " [compile failed]" } else { "" });
             }
         }
+        out += &report_sites(s);
         let mut failed: Vec<(String, u64)> = s.failed.lock().unwrap().drain().collect();
         if !failed.is_empty() {
             failed.sort_by(|a, b| b.1.cmp(&a.1));

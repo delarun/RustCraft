@@ -1618,7 +1618,9 @@ impl Gen<'_> {
             self.emit_generic_invoke(pc, depth);
             self.ins().else_();
         }
+        let counters = guard.and_then(|_| self.site_counters(pc, true, target));
         if let Some(class) = guard {
+            self.count(counters, 0);
             self.ins()
                 .local_get(FP)
                 .i32_load(mem(receiver_slot, 2))
@@ -1632,6 +1634,7 @@ impl Gen<'_> {
         self.ins().i32_const(STATUS_RETURN);
         if guard.is_some() {
             self.ins().else_();
+            self.count(counters, 1);
             self.sync_locals(false);
             self.emit_call(pc, &site, depth, args, receiver_is_this);
             self.ins().end();
@@ -1750,6 +1753,11 @@ impl Gen<'_> {
                 }
             }
             CallSite::Virtual(_) => {
+                let counters = match self.method.class().cp_cache[self.u2(pc + 1) as usize].get() {
+                    Some(Resolved::Method(resolved)) => self.site_counters(pc, false, resolved),
+                    _ => None,
+                };
+                self.count(counters, 0);
                 let (cache_class, cache_target) = self.inline_cache();
                 let receiver = self.scratch_i32();
                 let receiver_slot = self.slot_offset(args);
@@ -1769,6 +1777,7 @@ impl Gen<'_> {
                     .global_get(cache_class)
                     .i32_ne()
                     .if_(BlockType::Empty);
+                self.count(counters, 1);
                 self.dispatch_miss(pc, receiver, cache_target);
                 self.ins()
                     .local_get(receiver)
@@ -1882,6 +1891,27 @@ impl Gen<'_> {
             }
         }
         Ok(())
+    }
+
+    /// RJAVA_JIT_STATS under wasm: counters for the virtual call site at
+    /// `pc` (see `stats::Site`), as their address.
+    fn site_counters(&self, pc: usize, guarded: bool, target: MethodRef) -> Option<u64> {
+        if !cfg!(target_family = "wasm") {
+            return None;
+        }
+        let stats = super::stats::get()?;
+        let counters: &'static [std::sync::atomic::AtomicU32; 2] = Box::leak(Box::default());
+        let site = super::stats::Site { counters, guarded, caller: self.c.method, pc: pc as u32, target };
+        stats.sites.lock().unwrap().push(site);
+        Some(counters.as_ptr() as usize as u64)
+    }
+
+    /// Increments the counter at `address` (not atomically: statistics).
+    fn count(&mut self, address: Option<u64>, index: u64) {
+        if let Some(address) = address {
+            let at = MemArg { offset: address + 4 * index, align: 2, memory_index: 0 };
+            self.ins().i32_const(0).i32_const(0).i32_load(at).i32_const(1).i32_add().i32_store(at);
+        }
     }
 
     /// Allocates an inline cache: two mutable i32 globals (initially -1).
