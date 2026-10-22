@@ -329,6 +329,8 @@ pub mod pure {
 /// calls none of them matched; after `threshold()` of them it reports the
 /// receiver's class (`pure` REPROFILE), whose target becomes another
 /// candidate of the site, and the method is compiled again with it.
+/// Off by default: on the benchmark world it cut guard misses ~5x but cost
+/// ~17% more CPU (larger code, recompilations).
 pub mod profile {
     use crate::class::MethodRef;
     use std::collections::HashMap;
@@ -353,10 +355,11 @@ pub mod profile {
         TARGETS.get_or_init(Default::default)
     }
 
-    /// Misses before a site reports (RJAVA_JIT_REPROFILE; 0: never).
+    /// Misses before a site reports (RJAVA_JIT_REPROFILE, e.g. 1000; 0, the
+    /// default: never).
     pub fn threshold() -> u32 {
         static THRESHOLD: OnceLock<u32> = OnceLock::new();
-        *THRESHOLD.get_or_init(|| std::env::var("RJAVA_JIT_REPROFILE").ok().and_then(|v| v.parse().ok()).unwrap_or(1000))
+        *THRESHOLD.get_or_init(|| std::env::var("RJAVA_JIT_REPROFILE").ok().and_then(|v| v.parse().ok()).unwrap_or(0))
     }
 
     /// Registers a site of compiled code; its id for REPROFILE.

@@ -83,6 +83,8 @@ fn run_ours(classes: &Path, modules: &Path, main: &str, heap_size: usize, jit: b
             std::env::set_var("RJAVA_JIT_THRESHOLD", "5");
             // Compile on the calling thread, so the code that follows runs compiled.
             std::env::set_var("RJAVA_JIT_SYNC", "1");
+            // Polymorphic inlining is off by default: test it anyway.
+            std::env::set_var("RJAVA_JIT_REPROFILE", "1000");
         }
         let backend = jit_wasmtime::WasmtimeJit::new(jit_wasmtime::WasmtimeJit::memory_size(heap_size, options.max_threads))
             .expect("JIT backend");
