@@ -110,7 +110,12 @@ Diagnostics are switched on with environment variables:
 
 ## License
 
-RustCraft's own code: license to be decided. Third-party components compiled into
+RustCraft is free software: you can redistribute it and/or modify it under the terms of
+the [GNU Affero General Public License, version 3](LICENSE) (AGPL-3.0-only). If you run a
+modified version as a public website, the AGPL requires you to offer its source code to
+its users (the launcher links to its source in the footer).
+
+Third-party components compiled into
 `rjava.wasm` and the site are listed with their licenses in
 [launcher/public/third-party-notices.txt](launcher/public/third-party-notices.txt).
 Minecraft, LWJGL and the Java runtime are not part of this repository and are not

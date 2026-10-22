@@ -2,6 +2,7 @@
 name = "jimage"
 description = "Reader for the JDK runtime image (lib/modules)"
 edition.workspace = true
+license.workspace = true
 version.workspace = true
 
 [dependencies]

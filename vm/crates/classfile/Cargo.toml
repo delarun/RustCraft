@@ -2,6 +2,7 @@
 name = "classfile"
 description = "Java class file parser"
 edition.workspace = true
+license.workspace = true
 version.workspace = true
 
 [dev-dependencies]

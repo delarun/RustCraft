@@ -2,6 +2,7 @@
 name = "jit-web"
 description = "Browser backend for the JIT: runs compiled WebAssembly through the JS API, in the VM's own memory"
 edition.workspace = true
+license.workspace = true
 version.workspace = true
 
 [dependencies]

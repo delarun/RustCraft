@@ -2,6 +2,7 @@
 name = "rjava"
 description = "Command-line launcher for the jvm crate (native builds)"
 edition.workspace = true
+license.workspace = true
 version.workspace = true
 
 [dependencies]

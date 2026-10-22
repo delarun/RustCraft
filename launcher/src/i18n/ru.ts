@@ -199,6 +199,7 @@ export const ru: Messages = {
   disclaimerLocal: 'НЕОФИЦИАЛЬНЫЙ ПРОДУКТ MINECRAFT. НЕ ОДОБРЕН MOJANG ИЛИ MICROSOFT И НЕ СВЯЗАН С НИМИ.',
   footerHtml:
     'Minecraft — торговая марка Mojang Synergies AB. Игра и её файлы загружаются с серверов Mojang; для игры нужна собственная лицензия. ' +
+    'RustCraft — свободное ПО под лицензией GNU AGPL-3.0: <a href="https://github.com/delarun/RustCraft" target="_blank" rel="noopener">исходный код</a> · ' +
     '<a href="third-party-notices.txt" target="_blank" rel="noopener">Лицензии стороннего ПО</a>',
 
   text: (message: S) => message,

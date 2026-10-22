@@ -200,6 +200,7 @@ export const en = {
   disclaimerLocal: null as string | null,
   footerHtml:
     'Minecraft is a trademark of Mojang Synergies AB. The game and its files are downloaded from Mojang’s servers; you need your own license to play. ' +
+    'RustCraft is free software under the GNU AGPL-3.0: <a href="https://github.com/delarun/RustCraft" target="_blank" rel="noopener">source code</a> · ' +
     '<a href="third-party-notices.txt" target="_blank" rel="noopener">Third-party licenses</a>',
 
   /** An untranslated message (e.g. from the network stack). */

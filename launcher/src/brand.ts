@@ -8,5 +8,7 @@ export const PRODUCT_NAME = 'RustCraft - Java in Browser - Native Minecraft';
 
 /** The public site. Code uses relative URLs; this is for metadata, docs and the server. */
 export const SITE_URL = 'https://rustcraft.online';
+/** The source of this deployment (the AGPL requires offering it to users). */
+export const SOURCE_URL = 'https://github.com/delarun/RustCraft';
 
 export const DISCLAIMER = 'NOT AN OFFICIAL MINECRAFT PRODUCT. NOT APPROVED BY OR ASSOCIATED WITH MOJANG OR MICROSOFT.';

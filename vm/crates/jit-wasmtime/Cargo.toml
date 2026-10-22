@@ -2,6 +2,7 @@
 name = "jit-wasmtime"
 description = "Native backend for the JIT: runs compiled WebAssembly with wasmtime"
 edition.workspace = true
+license.workspace = true
 version.workspace = true
 
 [dependencies]
