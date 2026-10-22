@@ -62,15 +62,19 @@ struct InlineLimits {
     bytes: usize,
 }
 
-fn inline_limits() -> &'static InlineLimits {
-    static LIMITS: std::sync::OnceLock<InlineLimits> = std::sync::OnceLock::new();
-    LIMITS.get_or_init(|| {
-        let values: Vec<usize> = std::env::var("RJAVA_JIT_INLINE")
-            .map(|v| v.split(',').filter_map(|x| x.parse().ok()).collect())
-            .unwrap_or_default();
-        let get = |i: usize, default: usize| values.get(i).copied().unwrap_or(default);
-        InlineLimits { size: get(0, 80), depth: get(1, 5).min(MAX_INLINE_DEPTH), bytes: get(2, 4000) }
-    })
+fn inline_limits(tier: u8) -> &'static InlineLimits {
+    static LIMITS: std::sync::OnceLock<[InlineLimits; 2]> = std::sync::OnceLock::new();
+    let limits = LIMITS.get_or_init(|| {
+        let parse = |var: &str, defaults: (usize, usize, usize)| {
+            let values: Vec<usize> =
+                std::env::var(var).map(|v| v.split(',').filter_map(|x| x.parse().ok()).collect()).unwrap_or_default();
+            let get = |i: usize, default: usize| values.get(i).copied().unwrap_or(default);
+            InlineLimits { size: get(0, defaults.0), depth: get(1, defaults.1).min(MAX_INLINE_DEPTH), bytes: get(2, defaults.2) }
+        };
+        // Tier 2 (hot methods, RJAVA_JIT_INLINE2): a larger budget.
+        [parse("RJAVA_JIT_INLINE", (80, 5, 4000)), parse("RJAVA_JIT_INLINE2", (160, 6, 10000))]
+    });
+    &limits[(tier >= 2) as usize]
 }
 
 /// Synchronized methods are left to the interpreter unless
@@ -207,6 +211,7 @@ pub fn compile(
     }
     let code = method.code.as_ref().ok_or("no code")?;
     let bytes: &'static [u8] = &code.code;
+    let tier = method.jit.tier.load(std::sync::atomic::Ordering::Relaxed);
     if bytes.len() > MAX_CODE {
         return Err(format!("code too large ({} bytes)", bytes.len()));
     }
@@ -303,6 +308,7 @@ pub fn compile(
         slots_used: own_slots,
         levels_used: 0,
         inline_levels,
+        tier,
     }
         };
     }
@@ -456,6 +462,30 @@ fn call_entry(method: MethodRef, leaf: bool, stop_flag: u32, frame_cost: i32) ->
             .i32_const(method.global_index as i32)
             .call(FN_CALL_STUB)
             .return_()
+            .end();
+    }
+    let threshold = super::tier2_threshold();
+    if cfg!(target_family = "wasm") && threshold > 0 && method.jit.tier.load(std::sync::atomic::Ordering::Relaxed) < 2 {
+        // Count calls; at the threshold, ask for tier 2 (`pure` TIER_UP).
+        let calls = &method.jit.calls as *const std::sync::atomic::AtomicU32 as usize as i32;
+        let at = MemArg { offset: 0, align: 2, memory_index: 0 };
+        f.instructions()
+            .i32_const(calls)
+            .i32_const(calls)
+            .i32_load(at)
+            .i32_const(1)
+            .i32_add()
+            .local_tee(TICK)
+            .i32_store(at)
+            .local_get(TICK)
+            .i32_const(threshold as i32)
+            .i32_eq()
+            .if_(BlockType::Empty)
+            .i32_const(super::pure::TIER_UP as i32)
+            .i32_const(method.global_index as i32)
+            .i32_const(0)
+            .call(FN_PURE)
+            .drop()
             .end();
     }
     if cfg!(target_family = "wasm") && super::stats::enabled() {
@@ -881,6 +911,8 @@ struct Inlined {
 struct Gen<'a> {
     c: Ctx,
     f: Function,
+    /// The compilation tier (see `super::MethodJit::tier`).
+    tier: u8,
     scratch: u32,
     call_site: &'a mut dyn FnMut(MethodRef, usize) -> CallSite,
     /// Inlined frames, outermost first (empty in the compiled method).
@@ -1760,7 +1792,7 @@ impl Gen<'_> {
     /// valid for), if any: small, straight-line or forward-branching, no
     /// handlers, within the nesting and size budgets.
     fn inline_candidate(&self, site: &CallSite, args: usize) -> Option<(MethodRef, Option<u32>)> {
-        let limits = inline_limits();
+        let limits = inline_limits(self.tier);
         if self.inlined.len() >= limits.depth.min(self.inline_levels) || self.inlined_bytes >= limits.bytes {
             return None;
         }

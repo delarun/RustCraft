@@ -82,6 +82,12 @@ pub struct MethodJit {
     pub recompile_queued: std::sync::atomic::AtomicBool,
     /// Calls this method's compiled code made through `invoke`.
     pub generic_calls: AtomicU32,
+    /// Calls into the baseline version (counted by its `call` entry, under
+    /// wasm); at `tier2_threshold` the method is compiled again as tier 2.
+    pub calls: AtomicU32,
+    /// 2 once the method was found hot: later compilations use the tier 2
+    /// settings (larger inlining budget).
+    pub tier: std::sync::atomic::AtomicU8,
     /// Backward branches taken in the interpreter (loop hotness).
     pub backedges: AtomicU32,
     /// Submitted to the compiler threads.
@@ -296,6 +302,15 @@ pub mod pure {
     pub const ALLOCATE_INSTANCE: u32 = 5;
     /// aastore check: may b be stored in array a (both non-null)?
     pub const ARRAY_STORE_CHECK: u32 = 6;
+    /// Method a (a global index) became hot: compile it as tier 2.
+    pub const TIER_UP: u32 = 7;
+}
+
+/// Calls of a method's baseline code before it is compiled as tier 2
+/// (RJAVA_JIT_TIER2=<calls>; 0: no tier 2).
+pub fn tier2_threshold() -> u32 {
+    static THRESHOLD: OnceLock<u32> = OnceLock::new();
+    *THRESHOLD.get_or_init(|| std::env::var("RJAVA_JIT_TIER2").ok().and_then(|v| v.parse().ok()).unwrap_or(20_000))
 }
 
 /// `vm.pure(op, a, b) -> result or -1`.
@@ -348,6 +363,13 @@ pub unsafe fn host_pure(t: *mut (), op: u32, a: u32, b: u32) -> i32 {
             crate::class::ClassKind::Array { component } => vm.class_of(b).is_subclass_of(component) as i32,
             _ => 0,
         },
+        pure::TIER_UP => {
+            if let Some(method) = vm.method_if_any(a.0) {
+                method.jit.tier.store(2, std::sync::atomic::Ordering::Relaxed);
+                vm.jit_queue.resubmit(vm.as_static(), method);
+            }
+            0
+        }
         pure::IS_INSTANCE if !a.is_null() => (!b.is_null() && vm.class_of(b).is_subclass_of(vm.class_from_mirror(a))) as i32,
         _ => -1,
     }
