@@ -30,7 +30,26 @@ pub(super) fn register(n: &mut Natives) {
     n.add("sun/nio/ch/Net.pollnvalValue()S", |_, _| ret_i(POLLNVAL as i32));
     n.add("sun/nio/ch/Net.pollconnValue()S", |_, _| ret_i(POLLOUT as i32));
 
-    n.add("sun/nio/ch/Net.socket0(ZZZZ)I", |t, _| {
+    // sockaddr layout constants (Linux), read by NativeSocketAddress.<clinit>.
+    n.add("sun/nio/ch/NativeSocketAddress.AFINET()I", |_, _| ret_i(2));
+    n.add("sun/nio/ch/NativeSocketAddress.AFINET6()I", |_, _| ret_i(10));
+    n.add("sun/nio/ch/NativeSocketAddress.sizeofSockAddr4()I", |_, _| ret_i(16));
+    n.add("sun/nio/ch/NativeSocketAddress.sizeofSockAddr6()I", |_, _| ret_i(28));
+    n.add("sun/nio/ch/NativeSocketAddress.sizeofFamily()I", |_, _| ret_i(2));
+    n.add("sun/nio/ch/NativeSocketAddress.offsetFamily()I", return_zero_int);
+    n.add("sun/nio/ch/NativeSocketAddress.offsetSin4Port()I", |_, _| ret_i(2));
+    n.add("sun/nio/ch/NativeSocketAddress.offsetSin4Addr()I", |_, _| ret_i(4));
+    n.add("sun/nio/ch/NativeSocketAddress.offsetSin6Port()I", |_, _| ret_i(2));
+    n.add("sun/nio/ch/NativeSocketAddress.offsetSin6Addr()I", |_, _| ret_i(8));
+    n.add("sun/nio/ch/NativeSocketAddress.offsetSin6ScopeId()I", |_, _| ret_i(24));
+    n.add("sun/nio/ch/NativeSocketAddress.offsetSin6FlowInfo()I", |_, _| ret_i(4));
+
+    n.add("sun/nio/ch/Net.socket0(ZZZZ)I", |t, a| {
+        if !arg_z(a, 1) {
+            // UDP: there is none in the browser (Minecraft's LAN server
+            // discovery catches this).
+            return Err(t.throw_new("java/net/SocketException", Some("UDP sockets are not supported")));
+        }
         let fd = t.vm.fds.allocate();
         t.vm.sockets.insert(fd, Endpoint::Unbound { bind: None });
         ret_i(fd)
