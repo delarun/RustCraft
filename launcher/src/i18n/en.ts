@@ -166,19 +166,20 @@ export const en = {
 
   // --- privacy ---
   privacyTitle: 'Privacy',
+  privacySignInTitle: 'Sign-in',
   privacySignInHtml:
-    'Sign-in happens on the servers of Microsoft, Xbox Live and Minecraft. Requests to them pass through our proxy (<code>/proxy/…</code>) ' +
-    'only because those servers do not accept requests from other websites (CORS). The proxy forwards the requests as they are and neither ' +
-    'stores nor logs request or response contents, Authorization headers or tokens.',
+    'Happens on Microsoft, Xbox Live and Minecraft servers. Requests go through our <code>/proxy/</code> only because of CORS; ' +
+    'it neither stores nor logs their contents, Authorization headers or tokens.',
+  privacyTokensTitle: 'Your tokens',
   privacyTokensHtml:
-    'Your tokens (Microsoft and Minecraft) and your profile are kept only in this browser (localStorage) and are removed by “Sign out”. ' +
-    'The Minecraft token is handed to the game running here, in this browser, as the official launcher does.',
+    'Microsoft and Minecraft tokens and your profile stay only in this browser’s localStorage and are removed by “Sign out”. ' +
+    'The Minecraft token goes only to the game running in this page.',
+  privacyFilesTitle: 'Game files',
   privacyFilesHtml:
-    'Game files are downloaded from Mojang’s servers into this browser’s storage (OPFS). Libraries and assets pass through the same proxy ' +
-    '(for the same reason, CORS), streamed and not stored by us.',
-  privacySettingsHtml:
-    'The selected version, your EULA acceptance, the language and other settings are kept in this browser’s localStorage. ' +
-    'We use no cookies, analytics or ads.',
+    'Downloaded from Mojang’s servers into this browser’s storage (OPFS). Libraries and assets stream through the same proxy ' +
+    'and are not stored by us.',
+  privacySettingsTitle: 'Settings',
+  privacySettingsHtml: 'Version, EULA acceptance, language and other settings live in this browser’s localStorage. No cookies, analytics or ads.',
 
   // --- storage ---
   storageTitle: 'Storage',
@@ -198,10 +199,11 @@ export const en = {
   // --- footer ---
   /** A translation shown next to the English legal disclaimer (null: none). */
   disclaimerLocal: null as string | null,
-  footerHtml:
-    'Minecraft is a trademark of Mojang Synergies AB. The game and its files are downloaded from Mojang’s servers; you need your own license to play. ' +
-    'RustCraft is free software under the GNU AGPL-3.0: <a href="https://github.com/delarun/RustCraft" target="_blank" rel="noopener">source code</a> · ' +
-    '<a href="third-party-notices.txt" target="_blank" rel="noopener">Third-party licenses</a>',
+  footerSource: 'Source code (AGPL-3.0)',
+  footerNotices: 'Third-party licenses',
+  footerEula: 'Minecraft EULA',
+  footerTrademark:
+    'Minecraft is a trademark of Mojang Synergies AB. The game files are downloaded from Mojang’s servers; you need your own license to play.',
 
   /** An untranslated message (e.g. from the network stack). */
   text: (message: S) => message,

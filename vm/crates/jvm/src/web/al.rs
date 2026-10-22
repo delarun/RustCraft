@@ -353,8 +353,10 @@ extern "C" fn al_is_enabled(capability: i32) -> bool {
     capability == AL_SOURCE_DISTANCE_MODEL && with_al!(|a| a.source_distance_model)
 }
 
-/// The AL extensions provided.
-const EXTENSIONS: &[&str] = &["AL_EXT_source_distance_model"];
+/// The AL extensions provided (the mixer implements every distance model).
+const EXTENSIONS: &[&str] = &["AL_EXT_source_distance_model", "AL_EXT_LINEAR_DISTANCE", "AL_EXT_EXPONENT_DISTANCE"];
+/// EXTENSIONS as the space-separated C string alGetString(AL_EXTENSIONS) returns.
+const EXTENSIONS_STRING: &[u8] = b"AL_EXT_source_distance_model AL_EXT_LINEAR_DISTANCE AL_EXT_EXPONENT_DISTANCE\0";
 extern "C" fn al_get_error() -> i32 {
     with_al!(|a| std::mem::replace(&mut a.error, AL_NO_ERROR))
 }
@@ -373,7 +375,7 @@ extern "C" fn al_get_string(param: i32) -> *const c_char {
         AL_VENDOR => static_c_str(b"rjava\0"),
         AL_VERSION => static_c_str(b"1.1 Web Audio\0"),
         AL_RENDERER => static_c_str(b"Software mixer\0"),
-        AL_EXTENSIONS => static_c_str(b"AL_EXT_source_distance_model\0"),
+        AL_EXTENSIONS => static_c_str(EXTENSIONS_STRING),
         AL_NO_ERROR => static_c_str(b"No Error\0"),
         AL_INVALID_NAME => static_c_str(b"Invalid Name\0"),
         AL_INVALID_ENUM => static_c_str(b"Invalid Enum\0"),

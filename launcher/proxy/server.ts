@@ -7,7 +7,10 @@
 //
 // Env: PORT (8080), HOST (127.0.0.1), STATIC_DIR, ALLOWED_ORIGINS (comma-
 // separated origins whose pages may use the proxy besides the server's own;
-// default https://rustcraft.online), TLS_CERT + TLS_KEY (PEM files; otherwise
+// default https://rustcraft.online), TRUST_PROXY=1 (behind our own reverse
+// proxy or Cloudflare: take the client IP for rate limits from
+// CF-Connecting-IP / X-Forwarded-For; never set it when clients connect
+// directly, or they could pick their own IP), TLS_CERT + TLS_KEY (PEM files; otherwise
 // run it behind an HTTPS reverse proxy — the site must be served over HTTPS).
 // No dependencies; Node ≥ 23.6 runs this TypeScript as is.
 
@@ -35,7 +38,7 @@ const TYPES: Record<string, string> = {
 };
 
 const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',').map((origin) => origin.trim()).filter(Boolean);
-const proxy = createProxy({ allowedOrigins });
+const proxy = createProxy({ allowedOrigins, trustProxy: process.env.TRUST_PROXY === '1' });
 
 async function serveStatic(req: IncomingMessage, res: ServerResponse) {
   const isolation = {

@@ -162,19 +162,37 @@
         </section>
       </main>
 
+      <section class="card privacy" aria-labelledby="privacy-title">
+        <h2 id="privacy-title" data-i18n="privacyTitle"></h2>
+        <ul class="privacy-grid">
+          <li>
+            <h3 data-i18n="privacySignInTitle"></h3>
+            <p data-i18n-html="privacySignInHtml"></p>
+          </li>
+          <li>
+            <h3 data-i18n="privacyTokensTitle"></h3>
+            <p data-i18n-html="privacyTokensHtml"></p>
+          </li>
+          <li>
+            <h3 data-i18n="privacyFilesTitle"></h3>
+            <p data-i18n-html="privacyFilesHtml"></p>
+          </li>
+          <li>
+            <h3 data-i18n="privacySettingsTitle"></h3>
+            <p data-i18n-html="privacySettingsHtml"></p>
+          </li>
+        </ul>
+      </section>
+
       <footer class="footer">
-        <section class="privacy" aria-labelledby="privacy-title">
-          <h2 id="privacy-title" data-i18n="privacyTitle"></h2>
-          <ul>
-            <li data-i18n-html="privacySignInHtml"></li>
-            <li data-i18n-html="privacyTokensHtml"></li>
-            <li data-i18n-html="privacyFilesHtml"></li>
-            <li data-i18n-html="privacySettingsHtml"></li>
-          </ul>
-        </section>
         <p class="disclaimer" id="disclaimer" lang="en">NOT AN OFFICIAL MINECRAFT PRODUCT. NOT APPROVED BY OR ASSOCIATED WITH MOJANG OR MICROSOFT.</p>
         <p class="disclaimer-local" id="disclaimer-local" hidden></p>
-        <p class="small muted" data-i18n-html="footerHtml"></p>
+        <ul class="footer-links">
+          <li><a id="source-link" href="https://github.com/delarun/RustCraft" target="_blank" rel="noopener" data-i18n="footerSource"></a></li>
+          <li><a href="third-party-notices.txt" target="_blank" rel="noopener" data-i18n="footerNotices"></a></li>
+          <li><a href="https://www.minecraft.net/eula" target="_blank" rel="noopener noreferrer" data-i18n="footerEula"></a></li>
+        </ul>
+        <p class="trademark" data-i18n="footerTrademark"></p>
       </footer>
     </div>
 

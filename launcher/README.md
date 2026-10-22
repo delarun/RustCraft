@@ -74,32 +74,55 @@ The site is static (`pnpm build` → `dist/`, including `rjava.wasm` and
 
 ```sh
 pnpm build
-STATIC_DIR=dist PORT=8080 node proxy/server.ts            # behind an HTTPS reverse proxy (recommended)
+TRUST_PROXY=1 STATIC_DIR=dist PORT=8080 node proxy/server.ts   # behind an HTTPS reverse proxy / Cloudflare (recommended)
 TLS_CERT=fullchain.pem TLS_KEY=privkey.pem STATIC_DIR=dist PORT=443 HOST=0.0.0.0 node proxy/server.ts
 ```
 
-The proxy (`proxy/proxy.ts`, tested in `proxy/proxy.test.ts`):
+The proxy (`proxy/proxy.ts`, tested in `proxy/proxy.test.ts`) is also what `pnpm dev` uses
+(`vite.config.ts`), so development and the site behave the same.
 
-- forwards only to the allowlisted hosts — sign-in: `login.microsoftonline.com`,
-  `user.auth.xboxlive.com`, `xsts.auth.xboxlive.com`, `api.minecraftservices.com` (GET/POST);
-  files: `libraries.minecraft.net`, `resources.download.minecraft.net` (GET/HEAD only);
-- serves only our own pages: requests with another site's `Origin` (anything but the server's
-  own origin and `ALLOWED_ORIGINS`, default `https://rustcraft.online`) or
-  `Sec-Fetch-Site: cross-site` get 403; it sends no CORS headers;
-- forwards only the request headers the services need, so Origin, Referer and Cookie never
-  reach them; drops Set-Cookie; caps sign-in request bodies at 64 KiB;
-- streams responses through without storing them and marks every response
-  `Cache-Control: no-store`, so neither we nor a CDN in front of us becomes a mirror (the
-  browser keeps game files in OPFS);
-- logs one line per request — method, host, status, duration — never paths, query strings,
-  headers, bodies or tokens.
+### Abuse protection
+
+The proxy must not let anyone send traffic to Microsoft or Mojang under our name, so it
+forwards only what the launcher itself calls:
+
+- **Routes**: per host, exact methods and anchored paths —
+  `login.microsoftonline.com` POST `/consumers/oauth2/v2.0/{devicecode,token}`;
+  `user.auth.xboxlive.com` POST `/user/authenticate`; `xsts.auth.xboxlive.com` POST
+  `/xsts/authorize`; `api.minecraftservices.com` POST `/authentication/login_with_xbox`,
+  GET `/entitlements/mcstore`, GET `/minecraft/profile`; `libraries.minecraft.net` GET/HEAD of
+  Maven `.jar` paths; `resources.download.minecraft.net` GET/HEAD of `/<2 hex>/<40 hex>`.
+  Query strings, `%`-escapes, `..`, `//` and backslashes are refused. Anything else: 403.
+- **Callers**: requests with another site's `Origin` (anything but the server's own origin and
+  `ALLOWED_ORIGINS`, default `https://rustcraft.online`) or `Sec-Fetch-Site: cross-site` get
+  403; no CORS headers are sent.
+- **Rate limits per client IP** (token buckets, 429 with `Retry-After`): sign-in 30/min, burst
+  15 (a device-code sign-in polls 12/min, then makes 5 calls); files 1200/min, burst 300 (a
+  full download of all ~5000 assets takes about 4 minutes; the launcher itself fetches ~110
+  files on first launch and the rest on demand). At most 16 concurrent upstream requests per
+  IP and 256 in total. Idle buckets are evicted, so memory stays bounded. Behind a reverse
+  proxy or Cloudflare set `TRUST_PROXY=1` so the client IP is taken from `CF-Connecting-IP` /
+  the last `X-Forwarded-For` entry — never when clients connect directly, or they could pick
+  their own IP.
+- **Upstream**: redirects are not followed (502); timeouts — sign-in 15 s in total, files 15 s
+  to the first byte, 30 s idle, 10 min in total; sign-in answers are capped at 1 MiB and
+  request bodies at 64 KiB.
+- Forwards only the request headers the services need (Origin, Referer and Cookie never reach
+  them), drops Set-Cookie, streams files without storing them, marks every response
+  `Cache-Control: no-store` (so no CDN in front of us becomes a mirror) and logs one line per
+  request — method, host, status, duration — never paths, headers, bodies or tokens.
+
+**Recommended**: put Cloudflare (or a similar CDN/WAF) in front of rustcraft.online with a
+rate-limiting rule on `/proxy/*` (for example 60 requests per 10 s per IP for
+`/proxy/login.microsoftonline.com/*`, `/proxy/user.auth.xboxlive.com/*`,
+`/proxy/xsts.auth.xboxlive.com/*` and `/proxy/api.minecraftservices.com/*`), bot protection,
+and `TRUST_PROXY=1` on the server; make sure the CDN does not cache `/proxy/*` (the proxy
+already says `no-store`).
 
 If the static files are hosted elsewhere (a CDN), run only the proxy (`node proxy/server.ts`)
 and route `https://rustcraft.online/proxy/` to it; the CDN must add the COOP/COEP headers.
-Consider rate limiting `/proxy/` at the reverse proxy.
-
-`jvm.html` (a developer console that reads host files through the dev server) is also part of
-the build; it does nothing useful in production.
+`jvm.html` (a developer console that reads host files through the dev server) is served by
+`pnpm dev` only and is not part of the build.
 
 ## Third-party notices
 

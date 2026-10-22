@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import html from '../index.html?raw';
-import { DISCLAIMER, PRODUCT_NAME, SITE_URL } from '../src/brand';
+import { DISCLAIMER, PRODUCT_NAME, SITE_URL, SOURCE_URL } from '../src/brand';
 
 describe('branding', () => {
   it('keeps the static page title and header equal to the constant', () => {
@@ -18,5 +18,10 @@ describe('branding', () => {
   it('shows the disclaimer and uses no images', () => {
     expect(html).toContain(DISCLAIMER);
     expect(html).not.toMatch(/<img|<svg|\.png|\.jpg|\.webp/i);
+  });
+
+  it('links the source code (AGPL) and the third-party notices from the footer', () => {
+    expect(html).toContain(`<a id="source-link" href="${SOURCE_URL}"`);
+    expect(html).toContain('href="third-party-notices.txt"');
   });
 });

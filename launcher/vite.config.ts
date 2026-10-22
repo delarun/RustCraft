@@ -1,6 +1,8 @@
 import { createReadStream, promises as fs } from 'node:fs';
+import type { IncomingMessage, ServerResponse } from 'node:http';
 import { resolve } from 'node:path';
-import { defineConfig, type Plugin, type ProxyOptions } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
+import { createProxy } from './proxy/proxy.ts';
 
 // Cross-origin isolation: required for SharedArrayBuffer, which the JVM's
 // threads (Web Workers sharing one WASM memory) will depend on.
@@ -9,38 +11,19 @@ const isolationHeaders = {
   'Cross-Origin-Embedder-Policy': 'require-corp',
 };
 
-// Same-origin proxy for the Mojang, Microsoft and Xbox hosts that send no
-// usable CORS headers (see src/mojang/mirror.ts, which maps URLs to it):
-// /proxy/<host>/<path> → https://<host>/<path>, for these hosts only. The
-// browser's Origin, Referer and cookies are not passed on: Microsoft's token
-// endpoint refuses cross-origin redemption for desktop (public client) apps.
-// A production deployment needs an equivalent proxy.
-const PROXIED_HOSTS = [
-  'libraries.minecraft.net',
-  'resources.download.minecraft.net',
-  'login.microsoftonline.com',
-  'user.auth.xboxlive.com',
-  'xsts.auth.xboxlive.com',
-  'api.minecraftservices.com',
-];
-const proxy: Record<string, ProxyOptions> = Object.fromEntries(
-  PROXIED_HOSTS.map((host) => [
-    `/proxy/${host}/`,
-    {
-      target: `https://${host}`,
-      changeOrigin: true,
-      rewrite: (path: string) => path.slice(`/proxy/${host}`.length),
-      configure: (server) => {
-        server.on('proxyReq', (request) => {
-          for (const header of ['origin', 'referer', 'cookie']) request.removeHeader(header);
-        });
-        server.on('proxyRes', (response) => {
-          delete response.headers['set-cookie'];
-        });
-      },
-    } satisfies ProxyOptions,
-  ]),
-);
+// The same-origin proxy for the Mojang, Microsoft and Xbox hosts that send no
+// usable CORS headers (/proxy/<host>/<path>, see src/mojang/mirror.ts): the
+// production code from proxy/proxy.ts, so development behaves like the site
+// (route allowlist, Origin check, rate limits, timeouts, no-store).
+const corsProxy = (): Plugin => {
+  const proxy = createProxy();
+  const middleware = (req: IncomingMessage, res: ServerResponse, next: () => void) => void proxy(req, res, next);
+  return {
+    name: 'cors-proxy',
+    configureServer: (server) => void server.middlewares.use(middleware),
+    configurePreviewServer: (server) => void server.middlewares.use(middleware),
+  };
+};
 
 // Our VM build, at the URL the launcher loads it from (src/ui/game.ts).
 const RJAVA_WASM = resolve(import.meta.dirname, '../vm/target/wasm32-wasip1-threads/release/rjava.wasm');
@@ -119,9 +102,10 @@ const devFs = (): Plugin => ({
 });
 
 export default defineConfig({
-  plugins: [devFs(), rjavaWasm(), rjavaWasmAsset()],
-  build: { rollupOptions: { input: ['index.html', 'jvm.html'] } },
-  server: { headers: isolationHeaders, proxy },
-  preview: { headers: isolationHeaders, proxy },
+  plugins: [corsProxy(), devFs(), rjavaWasm(), rjavaWasmAsset()],
+  // jvm.html is the developer console: served by `pnpm dev`, not part of the site.
+  build: { rollupOptions: { input: ['index.html'] } },
+  server: { headers: isolationHeaders },
+  preview: { headers: isolationHeaders },
   worker: { format: 'es' },
 });

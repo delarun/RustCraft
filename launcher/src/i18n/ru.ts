@@ -166,19 +166,20 @@ export const ru: Messages = {
 
   // --- privacy ---
   privacyTitle: 'Конфиденциальность',
+  privacySignInTitle: 'Вход',
   privacySignInHtml:
-    'Вход выполняется на серверах Microsoft, Xbox Live и Minecraft. Запросы к ним проходят через наш прокси (<code>/proxy/…</code>) ' +
-    'только потому, что эти серверы не разрешают запросы со сторонних сайтов (CORS). Прокси передаёт запросы как есть и не сохраняет ' +
-    'и не записывает в журналы ни содержимое запросов и ответов, ни заголовки Authorization, ни токены.',
+    'Выполняется на серверах Microsoft, Xbox Live и Minecraft. Запросы идут через наш <code>/proxy/</code> только из-за CORS; ' +
+    'он не сохраняет и не пишет в логи ни их содержимое, ни заголовки Authorization, ни токены.',
+  privacyTokensTitle: 'Ваши токены',
   privacyTokensHtml:
-    'Токены (Microsoft и Minecraft) и ваш профиль хранятся только в этом браузере (localStorage) и удаляются кнопкой «Выйти». ' +
-    'Токен Minecraft передаётся игре, которая работает здесь же, в браузере, — как это делает официальный лаунчер.',
+    'Токены Microsoft и Minecraft и профиль хранятся только в localStorage этого браузера и удаляются кнопкой «Выйти». ' +
+    'Токен Minecraft передаётся только игре, запущенной на этой странице.',
+  privacyFilesTitle: 'Файлы игры',
   privacyFilesHtml:
-    'Файлы игры скачиваются с серверов Mojang в хранилище этого браузера (OPFS). Библиотеки и ассеты идут через тот же прокси ' +
-    '(по той же причине — CORS) потоком, без сохранения у нас.',
-  privacySettingsHtml:
-    'Выбранная версия, принятие EULA, язык и другие настройки хранятся в localStorage этого браузера. ' +
-    'Мы не используем cookies, аналитику и рекламу.',
+    'Скачиваются с серверов Mojang в хранилище этого браузера (OPFS). Библиотеки и ассеты идут потоком через тот же прокси ' +
+    'и у нас не сохраняются.',
+  privacySettingsTitle: 'Настройки',
+  privacySettingsHtml: 'Версия, принятие EULA, язык и прочие настройки хранятся в localStorage этого браузера. Без cookies, аналитики и рекламы.',
 
   // --- storage ---
   storageTitle: 'Хранилище',
@@ -197,10 +198,11 @@ export const ru: Messages = {
 
   // --- footer ---
   disclaimerLocal: 'НЕОФИЦИАЛЬНЫЙ ПРОДУКТ MINECRAFT. НЕ ОДОБРЕН MOJANG ИЛИ MICROSOFT И НЕ СВЯЗАН С НИМИ.',
-  footerHtml:
-    'Minecraft — торговая марка Mojang Synergies AB. Игра и её файлы загружаются с серверов Mojang; для игры нужна собственная лицензия. ' +
-    'RustCraft — свободное ПО под лицензией GNU AGPL-3.0: <a href="https://github.com/delarun/RustCraft" target="_blank" rel="noopener">исходный код</a> · ' +
-    '<a href="third-party-notices.txt" target="_blank" rel="noopener">Лицензии стороннего ПО</a>',
+  footerSource: 'Исходный код (AGPL-3.0)',
+  footerNotices: 'Лицензии стороннего ПО',
+  footerEula: 'EULA Minecraft',
+  footerTrademark:
+    'Minecraft — торговая марка Mojang Synergies AB. Файлы игры загружаются с серверов Mojang; для игры нужна собственная лицензия.',
 
   text: (message: S) => message,
 };
