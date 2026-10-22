@@ -109,6 +109,8 @@ export const ru: Messages = {
   failuresSummary: 'Ошибки загрузки',
   browserMissing: (features: S) => `Браузер не поддерживает: ${features}.`,
   blockedIsolation: 'Игра здесь не запустится: страница не изолирована (cross-origin isolation) — сервер должен отдавать заголовки COOP/COEP.',
+  blockedJspi:
+    'Игра пока не запускается в этом браузере: ей нужен WebAssembly JSPI, а Safari его не поддерживает. Откройте свежий Chrome или Edge.',
   blockedSharedMemory: 'Игра не запустится в этом браузере: нет поддержки SharedArrayBuffer. Попробуйте свежий Chrome, Edge или Firefox.',
   featureMissing: (feature: S, why: S) => `${feature} недоступен в этом браузере: ${why}.`,
   whyIsolation: 'страница должна отдаваться с заголовками COOP/COEP',

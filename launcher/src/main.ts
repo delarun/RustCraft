@@ -83,6 +83,8 @@ interface Check {
 const BLOCKERS: [() => boolean, MessageKey][] = [
   [() => crossOriginIsolated, 'blockedIsolation'],
   [() => typeof SharedArrayBuffer !== 'undefined', 'blockedSharedMemory'],
+  // JSPI: the game's threads suspend to present frames (src/jvm/platform.ts).
+  [() => typeof (WebAssembly as { Suspending?: unknown }).Suspending === 'function', 'blockedJspi'],
 ];
 /** Listed under "System check". */
 const CHECKS: Check[] = [

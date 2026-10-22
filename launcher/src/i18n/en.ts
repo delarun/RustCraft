@@ -109,6 +109,8 @@ export const en = {
   failuresSummary: 'Download errors',
   browserMissing: (features: S) => `This browser lacks: ${features}.`,
   blockedIsolation: 'The game cannot run here: this page is not cross-origin isolated (the server must send COOP/COEP headers).',
+  blockedJspi:
+    'The game cannot run in this browser yet: it needs WebAssembly JSPI, which Safari does not support. Use a current Chrome or Edge.',
   blockedSharedMemory: 'The game cannot run in this browser: it does not support SharedArrayBuffer. Try a current Chrome, Edge or Firefox.',
   featureMissing: (feature: S, why: S) => `${feature} is not available in this browser: ${why}.`,
   whyIsolation: 'the page must be served with COOP/COEP headers',
