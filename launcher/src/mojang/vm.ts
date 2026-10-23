@@ -30,8 +30,6 @@ export const STUB_NATIVES = [
 
 /** Flags our VM needs on top of the version's. */
 export const VM_JVM_ARGS = [
-  // The VM reads multi-release jars as plain jars.
-  '-Djdk.util.jar.enableMultiRelease=false',
   `-Djava.library.path=${NATIVES_DIR}`,
   `-Dorg.lwjgl.librarypath=${NATIVES_DIR}`,
   // No jemalloc: LWJGL allocates through the VM's malloc.

@@ -94,7 +94,8 @@ describe('VM process', () => {
     expect(args).toContain('-Dorg.lwjgl.librarypath=/natives');
     expect(args).toContain('-Djava.library.path=/natives');
     expect(args).toContain('-Dorg.lwjgl.system.allocator=system');
-    expect(args).toContain('-Djdk.util.jar.enableMultiRelease=false');
+    // Multi-release jars are read as such (log4j's caller lookup needs its Java 9 classes).
+    expect(args.some((a) => a.includes('enableMultiRelease'))).toBe(false);
     expect(args.filter((a) => a.startsWith('-Djava.library.path'))).toHaveLength(1);
     const main = args.indexOf('net.minecraft.client.main.Main');
     expect(args.slice(4, main).every((a, i, all) => a.startsWith('-D') || a === '-cp' || all[i - 1] === '-cp')).toBe(true);
