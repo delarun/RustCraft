@@ -496,19 +496,28 @@ pub(crate) fn unbox_value(t: &mut Thread<'_>, kind: FieldKind, obj: Ref) -> JRes
         return Err(t.throw_new("java/lang/IllegalArgumentException", Some("argument type mismatch")));
     };
     let raw = t.field(obj, class, "value");
-    let value = match (source, kind) {
+    match widen_slot(source, kind, raw) {
+        Some(value) => Ok(value),
+        None => Err(t.throw_new("java/lang/IllegalArgumentException", Some("argument type mismatch"))),
+    }
+}
+
+/// A primitive slot value of kind `source` as kind `target`, by an identity
+/// or widening primitive conversion (JLS 5.1.2); None if there is none.
+pub(crate) fn widen_slot(source: FieldKind, target: FieldKind, raw: u64) -> Option<u64> {
+    use FieldKind::*;
+    Some(match (source, target) {
         (s, k) if s == k => raw,
-        (FieldKind::Byte | FieldKind::Short | FieldKind::Char | FieldKind::Int, FieldKind::Int) => raw,
-        (FieldKind::Byte, FieldKind::Short) => raw,
-        (FieldKind::Byte | FieldKind::Short | FieldKind::Char | FieldKind::Int, FieldKind::Long) => raw as i32 as i64 as u64,
-        (FieldKind::Byte | FieldKind::Short | FieldKind::Char | FieldKind::Int, FieldKind::Float) => (raw as i32 as f32).to_bits() as u64,
-        (FieldKind::Byte | FieldKind::Short | FieldKind::Char | FieldKind::Int, FieldKind::Double) => (raw as i32 as f64).to_bits(),
-        (FieldKind::Long, FieldKind::Float) => (raw as i64 as f32).to_bits() as u64,
-        (FieldKind::Long, FieldKind::Double) => (raw as i64 as f64).to_bits(),
-        (FieldKind::Float, FieldKind::Double) => (f32::from_bits(raw as u32) as f64).to_bits(),
-        _ => return Err(t.throw_new("java/lang/IllegalArgumentException", Some("argument type mismatch"))),
-    };
-    Ok(value)
+        (Byte | Short | Char | Int, Int) => raw,
+        (Byte, Short) => raw,
+        (Byte | Short | Char | Int, Long) => raw as i32 as i64 as u64,
+        (Byte | Short | Char | Int, Float) => (raw as i32 as f32).to_bits() as u64,
+        (Byte | Short | Char | Int, Double) => (raw as i32 as f64).to_bits(),
+        (Long, Float) => (raw as i64 as f32).to_bits() as u64,
+        (Long, Double) => (raw as i64 as f64).to_bits(),
+        (Float, Double) => (f32::from_bits(raw as u32) as f64).to_bits(),
+        _ => return None,
+    })
 }
 
 // --- constants and call sites --------------------------------------------------------

@@ -349,6 +349,18 @@ fn class_for_name0(t: &mut Thread<'_>, a: &[u64]) -> JResult<Option<u64>> {
             Ok(class) => class,
             Err(_) => return Err(t.throw_new("java/lang/ClassNotFoundException", Some(&java_name))),
         }
+    } else if java_name.starts_with('[') {
+        // Arrays are made by the VM; only the element type is loaded (by the
+        // loader), as in HotSpot (e.g. dynamic proxies look up "[Ljava.lang.Object;").
+        match t.load_class_in(loader, &java_name.replace('.', "/")) {
+            Ok(class) => class,
+            Err(_) => {
+                // (HotSpot names the element class.)
+                let element = java_name.trim_start_matches('[');
+                let element = element.strip_prefix('L').and_then(|e| e.strip_suffix(';')).unwrap_or(&java_name);
+                return Err(t.throw_new("java/lang/ClassNotFoundException", Some(element)));
+            }
+        }
     } else {
         // Delegates to loader.loadClass, which throws ClassNotFoundException itself.
         let java_string = t.new_string(&java_name)?;

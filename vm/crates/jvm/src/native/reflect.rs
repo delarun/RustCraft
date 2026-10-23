@@ -1,6 +1,7 @@
 //! jdk.internal.reflect natives.
 
 use super::*;
+use crate::class::FieldKind;
 
 pub(super) fn register(n: &mut Natives) {
     n.add("jdk/internal/reflect/Reflection.getCallerClass()Ljava/lang/Class;", reflection_get_caller_class);
@@ -68,6 +69,90 @@ pub(super) fn register_members(n: &mut Natives) {
         ret_i(t.vm.heap.array_length(array))
     });
     n.add("java/lang/reflect/Array.multiNewArray(Ljava/lang/Class;[I)Ljava/lang/Object;", array_multi_new_array);
+    n.add("java/lang/reflect/Array.get(Ljava/lang/Object;I)Ljava/lang/Object;", |t, a| {
+        let (array, index, kind) = array_element(t, a)?;
+        let raw = read_element(t, array, index, kind);
+        ret_ref(super::invoke::box_value(t, kind, raw)?)
+    });
+    n.add("java/lang/reflect/Array.set(Ljava/lang/Object;ILjava/lang/Object;)V", |t, a| {
+        let (array, index, kind) = array_element(t, a)?;
+        let value = arg_ref(a, 2);
+        let raw = if kind == FieldKind::Ref {
+            let component = t.vm.class_of(array).component().unwrap();
+            if !value.is_null() && !t.vm.class_of(value).is_subclass_of(component) {
+                return Err(t.throw_new("java/lang/IllegalArgumentException", Some("array element type mismatch")));
+            }
+            value.slot()
+        } else {
+            super::invoke::unbox_value(t, kind, value)?
+        };
+        write_element(t, array, index, kind, raw);
+        ret_void()
+    });
+    // getX: the element widened to X; setX: the value widened to the element.
+    macro_rules! primitive_accessors {
+        ($($kind:ident $name:literal $desc:literal),*) => {$(
+            n.add(concat!("java/lang/reflect/Array.get", $name, "(Ljava/lang/Object;I)", $desc), |t, a| array_get_as(t, a, FieldKind::$kind));
+            n.add(concat!("java/lang/reflect/Array.set", $name, "(Ljava/lang/Object;I", $desc, ")V"), |t, a| array_set_as(t, a, FieldKind::$kind));
+        )*};
+    }
+    primitive_accessors!(Boolean "Boolean" "Z", Byte "Byte" "B", Char "Char" "C", Short "Short" "S", Int "Int" "I", Long "Long" "J", Float "Float" "F", Double "Double" "D");
+}
+
+fn array_get_as(t: &mut Thread<'_>, a: &[u64], kind: FieldKind) -> JResult<Option<u64>> {
+    let (array, index, element) = array_element(t, a)?;
+    let raw = read_element(t, array, index, element);
+    match (element != FieldKind::Ref).then(|| super::invoke::widen_slot(element, kind, raw)).flatten() {
+        Some(value) => Ok(Some(value)),
+        None => Err(t.throw_new("java/lang/IllegalArgumentException", Some("argument type mismatch"))),
+    }
+}
+
+fn array_set_as(t: &mut Thread<'_>, a: &[u64], kind: FieldKind) -> JResult<Option<u64>> {
+    let (array, index, element) = array_element(t, a)?;
+    match (element != FieldKind::Ref).then(|| super::invoke::widen_slot(kind, element, a[2])).flatten() {
+        Some(value) => {
+            write_element(t, array, index, element, value);
+            ret_void()
+        }
+        None => Err(t.throw_new("java/lang/IllegalArgumentException", Some("argument type mismatch"))),
+    }
+}
+
+/// The array (argument 0), index (argument 1, in bounds) and element kind of
+/// a java.lang.reflect.Array access.
+fn array_element(t: &mut Thread<'_>, a: &[u64]) -> JResult<(Ref, u32, FieldKind)> {
+    let array = t.null_check(arg_ref(a, 0))?;
+    let Some(kind) = t.vm.class_of(array).element_kind() else {
+        return Err(t.throw_new("java/lang/IllegalArgumentException", Some("Argument is not an array")));
+    };
+    let index = arg_i(a, 1);
+    if index < 0 || index >= t.vm.heap.array_length(array) {
+        return Err(t.throw_new("java/lang/ArrayIndexOutOfBoundsException", Some(&format!("Index {index} out of bounds"))));
+    }
+    Ok((array, index as u32, kind))
+}
+
+/// An array element as a slot value (sub-int kinds extended as the
+/// interpreter's array loads do).
+fn read_element(t: &Thread<'_>, array: Ref, index: u32, kind: FieldKind) -> u64 {
+    let size = kind.size();
+    let bytes = t.vm.heap.bytes(array, crate::heap::ARRAY_BASE_OFFSET + index * size, size as usize);
+    let mut buf = [0u8; 8];
+    buf[..bytes.len()].copy_from_slice(bytes);
+    let raw = u64::from_le_bytes(buf);
+    match kind {
+        FieldKind::Byte => raw as u8 as i8 as i32 as u32 as u64,
+        FieldKind::Short => raw as u16 as i16 as i32 as u32 as u64,
+        _ => raw,
+    }
+}
+
+fn write_element(t: &Thread<'_>, array: Ref, index: u32, kind: FieldKind, raw: u64) {
+    let size = kind.size();
+    let bytes = t.vm.heap.bytes_mut(array, crate::heap::ARRAY_BASE_OFFSET + index * size, size as usize);
+    let value = if kind == FieldKind::Boolean { raw & 1 } else { raw };
+    bytes.copy_from_slice(&value.to_le_bytes()[..size as usize]);
 }
 
 fn this_class(t: &Thread<'_>, a: &[u64]) -> ClassRef {

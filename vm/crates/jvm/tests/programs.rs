@@ -260,3 +260,13 @@ fn unaligned() {
 fn unaligned_jit() {
     check("Unaligned", true);
 }
+
+#[test]
+fn reflect_arrays() {
+    check("ReflectArrays", false);
+}
+
+#[test]
+fn reflect_arrays_jit() {
+    check("ReflectArrays", true);
+}

@@ -66,6 +66,7 @@ fn class_loader_define_class0(t: &mut Thread<'_>, a: &[u64]) -> JResult<Option<u
         let _ = class.dynamic_nest_host.set(host);
     }
     let mirror = t.vm.mirror(class);
+    set_protection_domain(t, mirror, arg_ref(a, 6));
     if !class_data.is_null() {
         t.set_field(mirror, "java/lang/Class", "classData", class_data.slot());
     }
@@ -83,7 +84,18 @@ fn class_loader_define_class1(t: &mut Thread<'_>, a: &[u64]) -> JResult<Option<u
     let class = vm
         .define_class_bytes(name.as_deref(), &bytes, loader, None, false, &mut |n| load_for(t, loader, n))
         .map_err(|e| t.throw_vm_error(e))?;
-    ret_ref(t.vm.mirror(class))
+    let mirror = t.vm.mirror(class);
+    set_protection_domain(t, mirror, arg_ref(a, 5));
+    ret_ref(mirror)
+}
+
+/// Class.protectionDomain, which the VM sets when it defines a class (read by
+/// Class.getProtectionDomain: e.g. code sources, as Fabric's loader finds its
+/// jars by them).
+fn set_protection_domain(t: &mut Thread<'_>, mirror: Ref, domain: Ref) {
+    if !domain.is_null() {
+        t.set_field(mirror, "java/lang/Class", "protectionDomain", domain.slot());
+    }
 }
 
 /// Loads a superclass or superinterface of a class being defined by `loader`.
