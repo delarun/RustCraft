@@ -102,6 +102,8 @@ interface Vao {
 interface TextureInfo {
   object: WebGLTexture;
   levels: { width: number; height: number; internal: number }[];
+  /** Parameters set so far (redundant glTexParameter calls are skipped). */
+  params?: Map<number, number>;
 }
 
 interface Mapping {
@@ -166,6 +168,8 @@ class Context {
   /** The texture bound to each unit and target (for level queries). */
   bound = new Map<string, TextureInfo>();
   activeUnit = 0;
+  /** The sampler bound to each texture unit (redundant binds are skipped). */
+  samplerUnits: (WebGLSampler | null)[] = [];
   arrayBuffer: WebGLBuffer | null = null;
   vao: Vao;
   defaultVao: Vao;
@@ -402,6 +406,19 @@ export class GlEmulation {
     return !!this.c.boundBuffers.get(GL_PIXEL_UNPACK_BUFFER);
   }
 
+  /** Whether the texture bound to `target` has parameter `pname` set to
+   *  `value` already (else records it). */
+  private sameTextureParameter(target: number, pname: number, value: number) {
+    // (Texel buffers' textures get parameters from `flushTexelBuffers` too.)
+    if (target === GL_TEXTURE_BUFFER) return false;
+    const info = this.c.bound.get(this.textureKey(target));
+    if (!info) return false;
+    const params = (info.params ??= new Map());
+    if (params.get(pname) === value) return true;
+    params.set(pname, value);
+    return false;
+  }
+
   private textureKey(target: number) {
     return `${this.c.activeUnit}:${target}`;
   }
@@ -470,6 +487,8 @@ export class GlEmulation {
     return {
       glBindTexture(target: number, texture: number) {
         const info = self.c.textures.get(texture);
+        // Already bound (WebGL validates every call, so skip what changes nothing).
+        if (target !== GL_TEXTURE_BUFFER && self.c.bound.get(self.textureKey(target)) === info) return;
         // Texel buffers are 2D textures here, on their own units (see glTexBuffer).
         if (target === GL_TEXTURE_BUFFER) {
           g().activeTexture(0x84c0 + TEXEL_UNITS + self.c.activeUnit);
@@ -530,11 +549,13 @@ export class GlEmulation {
       glTexParameterf(target: number, pname: number, param: number) {
         if (IGNORED_TEXTURE_PARAMETERS.has(pname)) return;
         if (pname === GL_TEXTURE_MAX_ANISOTROPY && !self.c.anisotropy) return;
+        if (self.sameTextureParameter(target, pname, param)) return;
         g().texParameterf(target, pname, param);
       },
       glTexParameteri(target: number, pname: number, param: number) {
         if (IGNORED_TEXTURE_PARAMETERS.has(pname)) return;
         if (pname === GL_TEXTURE_WRAP_S || pname === GL_TEXTURE_WRAP_T || pname === GL_TEXTURE_WRAP_R) param = self.wrap(param);
+        if (self.sameTextureParameter(target, pname, param)) return;
         g().texParameteri(target, pname, param);
       },
       glViewport: (x: number, y: number, w: number, h: number) => g().viewport(x, y, w, h),
@@ -661,6 +682,7 @@ export class GlEmulation {
         g().texSubImage3D(target, level, x, y, z, w, h, d, format, type, view, offset);
       },
       glActiveTexture(texture: number) {
+        if (self.c.activeUnit === texture - 0x84c0) return;
         self.c.activeUnit = texture - 0x84c0;
         g().activeTexture(texture);
       },
@@ -777,8 +799,10 @@ export class GlEmulation {
         g().uniform1i(self.c.program?.locations[location - 1] ?? null, v);
       },
       glUseProgram(program: number) {
-        self.c.program = self.c.programs.get(program);
-        g().useProgram(self.c.program?.object ?? null);
+        const info = self.c.programs.get(program);
+        if (info && info === self.c.program) return;
+        self.c.program = info;
+        g().useProgram(info?.object ?? null);
       },
       nglBindAttribLocation: (program: number, index: number, name: number) =>
         g().bindAttribLocation(self.c.programs.get(program)!.object, index, self.readString(name)),
@@ -1034,7 +1058,12 @@ export class GlEmulation {
           self.drawBaseVertex(mode, i32[(count >>> 2) + i], type, i32[(indices >>> 2) + i] >>> 0, 1, i32[(base >>> 2) + i]);
         }
       },
-      glBindSampler: (unit: number, sampler: number) => g().bindSampler(unit, self.c.samplers.get(sampler)),
+      glBindSampler(unit: number, sampler: number) {
+        const object = self.c.samplers.get(sampler) ?? null;
+        if (self.c.samplerUnits[unit] === object) return;
+        self.c.samplerUnits[unit] = object;
+        g().bindSampler(unit, object);
+      },
       // Queries (timestamps, elapsed time; other kinds report 1) on the CPU clock.
       nglGenQueries(n: number, pointer: number) {
         self.genNames(n, pointer, () => self.c.queries.add({ start: 0, result: 0 }));
