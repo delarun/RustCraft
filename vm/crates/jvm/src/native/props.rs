@@ -33,6 +33,8 @@ fn vm_properties(t: &mut Thread<'_>, _: &[u64]) -> JResult<Option<u64>> {
         ("sun.java.command".into(), config.command.clone()),
         // The VM has no epoll; select with poll(2) semantics (see native/socket.rs).
         ("java.nio.channels.spi.SelectorProvider".into(), "sun.nio.ch.PollSelectorProvider".into()),
+        // No display: AWT runs headless (ImageIO and java.awt.image work).
+        ("java.awt.headless".into(), "true".into()),
     ];
     pairs.extend(config.properties.iter().cloned());
     let mut strings = Vec::with_capacity(pairs.len() * 2);

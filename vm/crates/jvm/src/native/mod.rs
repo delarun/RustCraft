@@ -76,7 +76,13 @@ impl Natives {
     }
 
     pub fn get(&self, key: &str) -> Option<NativeFn> {
-        self.map.get(key).copied()
+        if let Some(f) = self.map.get(key) {
+            return Some(*f);
+        }
+        // AWT and Java2D classes cache JNI field IDs for their C code in
+        // initIDs: nothing to do here (headless; image code is Java).
+        let awt = ["java/awt/", "sun/awt/", "sun/java2d/", "javax/imageio/"].iter().any(|p| key.starts_with(p));
+        (awt && key.ends_with(".initIDs()V")).then_some(no_op as NativeFn)
     }
 }
 

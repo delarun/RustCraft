@@ -270,3 +270,13 @@ fn reflect_arrays() {
 fn reflect_arrays_jit() {
     check("ReflectArrays", true);
 }
+
+#[test]
+fn image_io_read() {
+    check("ImageIoRead", false);
+}
+
+#[test]
+fn image_io_read_jit() {
+    check("ImageIoRead", true);
+}
