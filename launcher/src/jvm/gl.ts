@@ -88,11 +88,15 @@ interface Attribute {
   integer: boolean;
   divisor: number;
   enabled: boolean;
+  /** The base vertex the pointer is currently shifted by (see `shiftAttributes`). */
+  shift: number;
 }
 
 interface Vao {
   object: WebGLVertexArrayObject | null;
   attributes: Attribute[];
+  /** Some attribute pointers may be shifted (see `shiftAttributes`). */
+  shifted?: boolean;
 }
 
 interface TextureInfo {
@@ -210,7 +214,7 @@ class Context {
   attribute(index: number): Attribute {
     const attributes = this.vao.attributes;
     while (attributes.length <= index) {
-      attributes.push({ buffer: null, size: 4, type: GL_FLOAT, normalized: false, stride: 0, offset: 0, integer: false, divisor: 0, enabled: false });
+      attributes.push({ buffer: null, size: 4, type: GL_FLOAT, normalized: false, stride: 0, offset: 0, integer: false, divisor: 0, enabled: false, shift: 0 });
     }
     return attributes[index];
   }
@@ -406,29 +410,34 @@ export class GlEmulation {
     return param === GL_CLAMP_TO_BORDER ? GL_CLAMP_TO_EDGE : param;
   }
 
+  /** Points the enabled per-vertex attributes `base` vertices further
+   *  (base-vertex draws without the extension). Pointers stay shifted after
+   *  the draw: consecutive draws with the same base change nothing, and
+   *  every draw shifts them back first if needed. */
   private shiftAttributes(base: number) {
     const { gl } = this.c;
+    let moved = false;
     for (const [index, a] of this.c.vao.attributes.entries()) {
-      if (!a.enabled || a.divisor !== 0 || !a.buffer) continue;
+      const shift = a.divisor === 0 ? base : 0;
+      if (a.shift === shift || !a.buffer || (!a.enabled && shift !== 0)) continue;
       const stride = a.stride || a.size * (TYPE_SIZE[a.type] ?? 4);
       gl.bindBuffer(GL_ARRAY_BUFFER, a.buffer);
-      if (a.integer) gl.vertexAttribIPointer(index, a.size, a.type, a.stride, a.offset + base * stride);
-      else gl.vertexAttribPointer(index, a.size, a.type, a.normalized, a.stride, a.offset + base * stride);
+      if (a.integer) gl.vertexAttribIPointer(index, a.size, a.type, a.stride, a.offset + shift * stride);
+      else gl.vertexAttribPointer(index, a.size, a.type, a.normalized, a.stride, a.offset + shift * stride);
+      a.shift = shift;
+      moved = true;
     }
-    gl.bindBuffer(GL_ARRAY_BUFFER, this.c.arrayBuffer);
+    this.c.vao.shifted = base !== 0;
+    if (moved) gl.bindBuffer(GL_ARRAY_BUFFER, this.c.arrayBuffer);
   }
 
   private drawBaseVertex(mode: number, count: number, type: number, indices: number, instances: number, base: number) {
-    this.prepareDraw();
+    this.prepareDraw(base);
     const { gl, baseVertex } = this.c;
-    if (base === 0) {
-      gl.drawElementsInstanced(mode, count, type, indices >>> 0, instances);
-    } else if (baseVertex) {
+    if (base !== 0 && baseVertex) {
       baseVertex.drawElementsInstancedBaseVertexBaseInstanceWEBGL(mode, count, type, indices >>> 0, instances, base, 0);
     } else {
-      this.shiftAttributes(base);
       gl.drawElementsInstanced(mode, count, type, indices >>> 0, instances);
-      this.shiftAttributes(0);
     }
   }
 
@@ -832,7 +841,7 @@ export class GlEmulation {
       nglUniformMatrix4fv: (location: number, count: number, transpose: number, value: number) =>
         g().uniformMatrix4fv(self.c.program?.locations[location - 1] ?? null, !!transpose, self.memory.f32, value >>> 2, count * 16),
       nglVertexAttribPointer(index: number, size: number, type: number, normalized: number, stride: number, pointer: number) {
-        Object.assign(self.c.attribute(index), { buffer: self.c.arrayBuffer, size, type, normalized: !!normalized, stride, offset: pointer >>> 0, integer: false });
+        Object.assign(self.c.attribute(index), { buffer: self.c.arrayBuffer, size, type, normalized: !!normalized, stride, offset: pointer >>> 0, integer: false, shift: 0 });
         g().vertexAttribPointer(index, size, type, !!normalized, stride, pointer >>> 0);
       },
       glBindBufferBase(target: number, index: number, buffer: number) {
@@ -939,18 +948,24 @@ export class GlEmulation {
         return pointer;
       },
       nglVertexAttribIPointer(index: number, size: number, type: number, stride: number, pointer: number) {
-        Object.assign(self.c.attribute(index), { buffer: self.c.arrayBuffer, size, type, normalized: false, stride, offset: pointer >>> 0, integer: true });
+        Object.assign(self.c.attribute(index), { buffer: self.c.arrayBuffer, size, type, normalized: false, stride, offset: pointer >>> 0, integer: true, shift: 0 });
         g().vertexAttribIPointer(index, size, type, stride, pointer >>> 0);
       },
       glCopyBufferSubData(read: number, write: number, roffset: number, woffset: number, size: number) {
         const source = self.c.boundBuffers.get(read);
         const target = self.c.boundBuffers.get(write);
         if (target && source && self.c.elementBuffers.has(target) !== self.c.elementBuffers.has(source)) {
-          // WebGL copies index buffers only to and from index buffers: through the CPU.
-          self.warn('glCopyBufferSubData between index and other buffers goes through the CPU (slow)');
-          const bytes = new Uint8Array(size);
-          g().getBufferSubData(read, roffset, bytes);
-          g().bufferSubData(write, woffset, bytes);
+          // WebGL copies index buffers only to and from index buffers: through
+          // the CPU, from the source's copy (made by reading it back once, then
+          // kept current), as reading a buffer back stalls the GPU.
+          let from = self.c.shadows.get(source);
+          if (!from) {
+            const length = self.c.bufferSizes.get(source);
+            from = new Uint8Array(length ?? roffset + size);
+            g().getBufferSubData(read, 0, from);
+            if (length !== undefined) self.c.shadows.set(source, from);
+          }
+          g().bufferSubData(write, woffset, from, roffset, size);
         } else {
           g().copyBufferSubData(read, write, roffset, woffset, size);
         }
@@ -1106,9 +1121,11 @@ export class GlEmulation {
   /** Before a draw: texel buffers up to date, uniform buffer ranges at least
    *  as large as the program's blocks (drivers may round a std140 block's
    *  size up beyond what the game binds, which WebGL rejects). */
-  private prepareDraw() {
+  /** Before a draw (`base`: its base vertex, if any). */
+  private prepareDraw(base = 0) {
     this.flushTexelBuffers();
     const c = this.context;
+    if (c && (base !== 0 ? !c.baseVertex : c.vao.shifted)) this.shiftAttributes(base);
     const program = c?.program;
     if (!c || !program) return;
     const gl = c.gl;
