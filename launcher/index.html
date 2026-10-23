@@ -89,6 +89,21 @@
             <p class="status" id="compat"></p>
           </div>
 
+          <div class="field">
+            <span class="label" id="loader-title" data-i18n="loaderTitle"></span>
+            <div class="segmented" role="radiogroup" aria-labelledby="loader-title">
+              <label>
+                <input type="radio" name="loader" id="loader-vanilla" value="vanilla" />
+                <span data-i18n="loaderVanilla"></span>
+              </label>
+              <label>
+                <input type="radio" name="loader" id="loader-fabric" value="fabric" />
+                <span data-i18n="loaderFabric"></span>
+              </label>
+            </div>
+            <p class="status" id="loader-note"></p>
+          </div>
+
           <label class="check eula">
             <input type="checkbox" id="eula" />
             <span data-i18n-html="eulaHtml"></span>
@@ -143,6 +158,24 @@
               <button id="clear" class="button ghost small" data-i18n="clearDownloads"></button>
               <button id="clear-all" class="button ghost small danger" data-i18n="clearAll"></button>
             </div>
+          </details>
+
+          <details class="group" id="mods">
+            <summary data-i18n="modsTitle"></summary>
+            <p class="notice small" id="mods-vanilla" data-i18n="modsNeedFabric"></p>
+            <p class="muted small" data-i18n="modsNote"></p>
+            <h3 class="subhead" data-i18n="modsInstalled"></h3>
+            <ul class="mod-list" id="mods-list"></ul>
+            <p class="small muted" id="mods-empty" data-i18n="modsEmpty"></p>
+            <label class="dropzone" id="mods-drop">
+              <input type="file" id="mods-file" accept=".jar,application/java-archive" multiple />
+              <span data-i18n="modsUpload"></span>
+            </label>
+            <label for="mods-search" class="label" data-i18n="modsSearchLabel"></label>
+            <input id="mods-search" type="search" spellcheck="false" autocomplete="off" />
+            <p class="status" id="mods-status" role="status"></p>
+            <ul class="mod-list" id="mods-results"></ul>
+            <p class="muted small" data-i18n-html="modsModrinthHtml"></p>
           </details>
 
           <details class="group" id="multiplayer">
@@ -202,6 +235,10 @@
           <li>
             <h3 data-i18n="privacyMultiplayerTitle"></h3>
             <p data-i18n-html="privacyMultiplayerHtml"></p>
+          </li>
+          <li>
+            <h3 data-i18n="privacyModsTitle"></h3>
+            <p data-i18n-html="privacyModsHtml"></p>
           </li>
           <li>
             <h3 data-i18n="privacySettingsTitle"></h3>

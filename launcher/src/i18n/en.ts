@@ -99,6 +99,14 @@ export const en = {
   compatGlfw: 'this version uses GLFW, while our JVM implements only LWJGL’s SDL windows',
   compatDownload: (java: S) => ` The game and ${java} are downloaded from Mojang’s servers on first launch.`,
   versionJsonFailed: (error: S) => `Could not load the version description: ${error}`,
+  loaderTitle: 'Mod loader',
+  loaderVanilla: 'Vanilla',
+  loaderFabric: 'Fabric',
+  loaderChecking: (game: S) => `Looking up Fabric Loader for ${game} on meta.fabricmc.net…`,
+  loaderReady: (loader: S, mods: N, offline: boolean) =>
+    `Fabric Loader ${loader}${offline ? ' (offline: the last build found)' : ''} · mods: ${mods} (Settings → Mods)`,
+  loaderUnavailable: (game: S) => `Fabric Loader has no build for ${game} yet. Choose Vanilla to play this version.`,
+  loaderFailed: (error: S) => `Could not reach meta.fabricmc.net: ${error}`,
 
   // --- play ---
   playTitle: 'Game',
@@ -129,6 +137,7 @@ export const en = {
   // --- install ---
   installMetadata: (id: S) => `Loading the metadata of ${id}`,
   installRuntime: (component: S) => `Loading the description of Java runtime ${component}`,
+  installFabric: (loader: S) => `Loading Fabric Loader ${loader} from fabricmc.net`,
   installChecking: (full: boolean, files: N) => `${full ? 'Verifying (SHA-1)' : 'Checking'} and downloading ${files} files`,
   installBusy: 'An installation is already running',
   installCancelled: 'Installation cancelled',
@@ -143,6 +152,44 @@ export const en = {
   // --- settings ---
   settingsTitle: 'Settings',
   systemCheckTitle: 'System check',
+
+  // --- mods ---
+  modsTitle: 'Mods',
+  modsNeedFabric: 'Mods are loaded only with Fabric: choose Fabric under the game version.',
+  modsNote:
+    'Fabric mods that change the game’s logic, interface or content should work. Mods that need a newer OpenGL than ' +
+    'WebGL2 offers or native libraries will not (for example Sodium, Iris and shaders). Each mod makes the start slower.',
+  modsInstalled: 'Installed',
+  modsEmpty: 'No mods yet.',
+  modsUpload: 'Drop .jar files here or click to choose them',
+  modsSearchLabel: 'Find on Modrinth',
+  modsSearchPlaceholder: (game: S) => `Fabric mods for ${game}`,
+  modsSearching: 'Searching Modrinth…',
+  modsNoResults: (game: S) => `Modrinth has no matching Fabric mods for ${game}.`,
+  modsHitMeta: (downloads: S, author: S) => `${downloads} downloads · ${author}`,
+  modsModrinthHtml:
+    'Search by <a href="https://modrinth.com/mods" target="_blank" rel="noopener noreferrer">Modrinth</a>. ' +
+    'Mods are made by their authors and come under their own licenses.',
+  modInstall: 'Install',
+  modInstalledMark: 'Installed',
+  modInstalling: 'Installing…',
+  modRemove: 'Remove',
+  modForVersion: (versions: S) => `Made for ${versions}`,
+  modsResolving: (title: S) => `Looking up ${title} and its dependencies…`,
+  modsDownloading: (title: S, version: S, index: N, count: N) => `Downloading ${title} ${version} (${index} of ${count})…`,
+  modsInstalledDone: (title: S, dependencies: N, fabric: boolean) =>
+    `${title} installed${dependencies ? ` with ${dependencies} ${dependencies === 1 ? 'dependency' : 'dependencies'}` : ''}.` +
+    (fabric ? '' : ' Choose Fabric to load it.'),
+  modsAdded: (count: N, fabric: boolean) => `Files added: ${count}.${fabric ? '' : ' Choose Fabric to load them.'}`,
+  modsNotJar: (name: S) => `${name} is not a mod: choose .jar files.`,
+  modsRemoved: (name: S) => `${name} removed.`,
+  modNoVersion: (title: S, game: S) => `${title} has no Fabric version for ${game}.`,
+  modDependencyMissing: (dependency: S, mod: S, game: S) => `${mod} needs ${dependency}, which has no Fabric version for ${game}.`,
+  modIncompatible: (mod: S, other: S) => `${mod} is incompatible with ${other}.`,
+  modNoFile: (version: S) => `Modrinth lists no file for version ${version}.`,
+  modDownloadFailed: (file: S, reason: S) => `Could not download ${file}: ${reason}`,
+  modrinthRateLimited: 'Modrinth is limiting requests: try again in a minute.',
+  modrinthFailed: (status: N) => `Modrinth answered HTTP ${status}.`,
 
   // --- multiplayer ---
   multiplayerTitle: 'Multiplayer',
@@ -211,6 +258,11 @@ export const en = {
   privacyMultiplayerHtml:
     'The game’s connections (servers you join, online services it contacts) go from this browser to RustCraft Bridge ' +
     'on your computer (<code>ws://127.0.0.1:25580</code> by default), then straight to their destination — never through our servers.',
+  privacyModsTitle: 'Fabric and mods',
+  privacyModsHtml:
+    'Fabric Loader comes from <code>meta.fabricmc.net</code> and <code>maven.fabricmc.net</code>; mod search, icons and ' +
+    'files from <code>modrinth.com</code>. These requests go from this browser directly to those sites, not through our ' +
+    'servers, and only once you choose Fabric or open Mods. Mods are kept in this browser’s storage.',
   privacySettingsTitle: 'Settings',
   privacySettingsHtml: 'Version, EULA acceptance, language and other settings live in this browser’s localStorage. No cookies, analytics or ads.',
 

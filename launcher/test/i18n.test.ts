@@ -42,6 +42,20 @@ describe('message catalogs', () => {
     }
   });
 
+  it('cover the mod loader and the Mods section in both languages', () => {
+    for (const id of ['loader-vanilla', 'loader-fabric', 'loader-note', 'mods', 'mods-list', 'mods-file', 'mods-search', 'mods-results']) {
+      expect(html, id).toContain(`id="${id}"`);
+    }
+    expect(format(en, 'modsInstalledDone', ['Mod Menu', 2, true])).toBe('Mod Menu installed with 2 dependencies.');
+    expect(format(en, 'modsInstalledDone', ['Fabric API', 0, false])).toBe('Fabric API installed. Choose Fabric to load it.');
+    expect(format(ru, 'modsInstalledDone', ['Mod Menu', 2, true])).toBe('Mod Menu установлен, зависимостей: 2.');
+    expect(format(ru, 'loaderReady', ['0.20.1', 3, false])).toBe('Fabric Loader 0.20.1 · модов: 3 (Настройки → Моды)');
+    for (const catalog of [en, ru]) {
+      expect(catalog.privacyModsHtml).toMatch(/fabricmc\.net.*modrinth\.com/s);
+      expect(catalog.modsNote).toMatch(/Sodium/);
+    }
+  });
+
   it('keep the legal disclaimer in English and translate it only alongside', () => {
     expect(en.disclaimerLocal).toBeNull();
     expect(ru.disclaimerLocal).toMatch(/MOJANG/);

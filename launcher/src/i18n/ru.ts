@@ -99,6 +99,14 @@ export const ru: Messages = {
   compatGlfw: 'версия использует GLFW, а наша JVM реализует только SDL-окна LWJGL',
   compatDownload: (java: S) => ` Игра и ${java} скачаются с серверов Mojang при первом запуске.`,
   versionJsonFailed: (error: S) => `Не удалось загрузить описание версии: ${error}`,
+  loaderTitle: 'Загрузчик модов',
+  loaderVanilla: 'Vanilla',
+  loaderFabric: 'Fabric',
+  loaderChecking: (game: S) => `Ищу Fabric Loader для ${game} на meta.fabricmc.net…`,
+  loaderReady: (loader: S, mods: N, offline: boolean) =>
+    `Fabric Loader ${loader}${offline ? ' (офлайн: последняя найденная сборка)' : ''} · модов: ${mods} (Настройки → Моды)`,
+  loaderUnavailable: (game: S) => `У Fabric Loader пока нет сборки для ${game}. Чтобы играть в эту версию, выберите Vanilla.`,
+  loaderFailed: (error: S) => `Не удалось связаться с meta.fabricmc.net: ${error}`,
 
   // --- play ---
   playTitle: 'Игра',
@@ -129,6 +137,7 @@ export const ru: Messages = {
   // --- install ---
   installMetadata: (id: S) => `Загружаю метаданные ${id}`,
   installRuntime: (component: S) => `Загружаю описание Java-рантайма ${component}`,
+  installFabric: (loader: S) => `Загружаю Fabric Loader ${loader} с fabricmc.net`,
   installChecking: (full: boolean, files: N) => `${full ? 'Проверяю (SHA-1)' : 'Проверяю'} и скачиваю ${files} файлов`,
   installBusy: 'Установка уже идёт',
   installCancelled: 'Установка отменена',
@@ -143,6 +152,43 @@ export const ru: Messages = {
   // --- settings ---
   settingsTitle: 'Настройки',
   systemCheckTitle: 'Проверка браузера',
+
+  // --- mods ---
+  modsTitle: 'Моды',
+  modsNeedFabric: 'Моды загружаются только с Fabric: выберите Fabric под версией игры.',
+  modsNote:
+    'Моды Fabric, меняющие логику игры, интерфейс или контент, должны работать. Моды, которым нужен OpenGL новее, чем даёт ' +
+    'WebGL2, или нативные библиотеки, работать не будут (например, Sodium, Iris и шейдеры). Каждый мод замедляет запуск.',
+  modsInstalled: 'Установленные',
+  modsEmpty: 'Модов пока нет.',
+  modsUpload: 'Перетащите сюда файлы .jar или щёлкните, чтобы выбрать',
+  modsSearchLabel: 'Найти на Modrinth',
+  modsSearchPlaceholder: (game: S) => `Моды Fabric для ${game}`,
+  modsSearching: 'Ищу на Modrinth…',
+  modsNoResults: (game: S) => `На Modrinth нет подходящих модов Fabric для ${game}.`,
+  modsHitMeta: (downloads: S, author: S) => `Скачиваний: ${downloads} · ${author}`,
+  modsModrinthHtml:
+    'Поиск — <a href="https://modrinth.com/mods" target="_blank" rel="noopener noreferrer">Modrinth</a>. ' +
+    'Моды созданы их авторами и распространяются по их собственным лицензиям.',
+  modInstall: 'Установить',
+  modInstalledMark: 'Установлен',
+  modInstalling: 'Устанавливаю…',
+  modRemove: 'Удалить',
+  modForVersion: (versions: S) => `Сделан для ${versions}`,
+  modsResolving: (title: S) => `Ищу ${title} и его зависимости…`,
+  modsDownloading: (title: S, version: S, index: N, count: N) => `Скачиваю ${title} ${version} (${index} из ${count})…`,
+  modsInstalledDone: (title: S, dependencies: N, fabric: boolean) =>
+    `${title} установлен${dependencies ? `, зависимостей: ${dependencies}` : ''}.` + (fabric ? '' : ' Выберите Fabric, чтобы он загрузился.'),
+  modsAdded: (count: N, fabric: boolean) => `Добавлено файлов: ${count}.${fabric ? '' : ' Выберите Fabric, чтобы они загрузились.'}`,
+  modsNotJar: (name: S) => `${name} — не мод: выберите файлы .jar.`,
+  modsRemoved: (name: S) => `${name} удалён.`,
+  modNoVersion: (title: S, game: S) => `У ${title} нет версии для Fabric ${game}.`,
+  modDependencyMissing: (dependency: S, mod: S, game: S) => `${mod} нужен ${dependency}, а у него нет версии для Fabric ${game}.`,
+  modIncompatible: (mod: S, other: S) => `${mod} несовместим с ${other}.`,
+  modNoFile: (version: S) => `На Modrinth нет файла для версии ${version}.`,
+  modDownloadFailed: (file: S, reason: S) => `Не удалось скачать ${file}: ${reason}`,
+  modrinthRateLimited: 'Modrinth ограничивает запросы: попробуйте через минуту.',
+  modrinthFailed: (status: N) => `Modrinth ответил HTTP ${status}.`,
 
   // --- multiplayer ---
   multiplayerTitle: 'Сетевая игра',
@@ -211,6 +257,11 @@ export const ru: Messages = {
   privacyMultiplayerHtml:
     'Соединения игры (серверы, онлайн-сервисы, к которым она обращается) идут из браузера в RustCraft Bridge на вашем ' +
     'компьютере (по умолчанию <code>ws://127.0.0.1:25580</code>), а оттуда — прямо к адресату, минуя наши серверы.',
+  privacyModsTitle: 'Fabric и моды',
+  privacyModsHtml:
+    'Fabric Loader загружается с <code>meta.fabricmc.net</code> и <code>maven.fabricmc.net</code>, поиск, иконки и файлы ' +
+    'модов — с <code>modrinth.com</code>. Эти запросы идут из браузера прямо на эти сайты, минуя наши серверы, и только ' +
+    'после того, как вы выбрали Fabric или открыли «Моды». Моды хранятся в хранилище этого браузера.',
   privacySettingsTitle: 'Настройки',
   privacySettingsHtml: 'Версия, принятие EULA, язык и прочие настройки хранятся в localStorage этого браузера. Без cookies, аналитики и рекламы.',
 

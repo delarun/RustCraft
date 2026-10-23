@@ -13,8 +13,13 @@ export class Installer {
     this.worker.onerror = (event) => this.listener?.({ type: 'error', text: { key: 'text', args: [event.message] }, failures: [] });
   }
 
-  /** Installs (or checks) a version; resolves with the final event. */
-  install(entry: VersionManifestEntry, full: boolean, onEvent: (event: InstallEvent) => void): Promise<InstallResult> {
+  /** Installs (or checks) a version, with Fabric Loader if given; resolves with the final event. */
+  install(
+    entry: VersionManifestEntry,
+    full: boolean,
+    fabricLoader: string | undefined,
+    onEvent: (event: InstallEvent) => void,
+  ): Promise<InstallResult> {
     return new Promise((resolve) => {
       this.listener = (event) => {
         onEvent(event);
@@ -23,7 +28,7 @@ export class Installer {
           resolve(event);
         }
       };
-      this.send({ type: 'install', entry, full });
+      this.send({ type: 'install', entry, full, fabricLoader });
     });
   }
 

@@ -2,8 +2,11 @@ import type { Text } from '../i18n/error';
 import type { VersionManifestEntry } from '../mojang/types';
 
 export type InstallRequest =
-  /** full: re-hash every present file (otherwise files of the right size are trusted). */
-  | { type: 'install'; entry: VersionManifestEntry; full: boolean }
+  /**
+   * full: re-hash every present file (otherwise files of the right size are trusted).
+   * fabricLoader: also install this Fabric Loader build and launch through it.
+   */
+  | { type: 'install'; entry: VersionManifestEntry; full: boolean; fabricLoader?: string }
   | { type: 'cancel' };
 
 export interface InstallProgress {

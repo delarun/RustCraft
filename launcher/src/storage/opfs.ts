@@ -1,5 +1,6 @@
-// Main-thread, read-only access to the game directory in OPFS. Writes happen in
-// the download worker.
+// Main-thread access to the game directory in OPFS: reading metadata, small
+// files (options.txt) and the player's mods. Game downloads are written by the
+// download worker.
 
 import { DOWNLOAD_DIRS, OPFS_ROOT } from '../mojang/layout';
 
@@ -25,14 +26,52 @@ export async function readText(path: string): Promise<string | null> {
 /** Writes a small file at `path` unless it exists; returns whether it wrote. */
 export async function writeTextIfMissing(path: string, text: string): Promise<boolean> {
   if ((await readText(path)) !== null) return false;
+  await writeFile(path, text);
+  return true;
+}
+
+/** Creates or replaces a file, creating its directories. */
+export async function writeFile(path: string, data: string | Blob | Uint8Array<ArrayBuffer>) {
   let dir = await gameDir();
   const parts = path.split('/');
   const name = parts.pop()!;
   for (const part of parts) dir = await dir.getDirectoryHandle(part, { create: true });
   const writable = await (await dir.getFileHandle(name, { create: true })).createWritable();
-  await writable.write(text);
-  await writable.close();
-  return true;
+  try {
+    await writable.write(data);
+    await writable.close();
+  } catch (error) {
+    await writable.abort().catch(() => {});
+    throw error;
+  }
+}
+
+export async function removeFile(path: string) {
+  let dir = await gameDir();
+  const parts = path.split('/');
+  const name = parts.pop()!;
+  try {
+    for (const part of parts) dir = await dir.getDirectoryHandle(part);
+    await dir.removeEntry(name);
+  } catch (error) {
+    if (!(error instanceof DOMException && error.name === 'NotFoundError')) throw error;
+  }
+}
+
+/** The files directly in a directory (none if it does not exist). */
+export async function listFiles(path: string): Promise<{ name: string; size: number }[]> {
+  let dir = await gameDir();
+  try {
+    for (const part of path.split('/')) dir = await dir.getDirectoryHandle(part);
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'NotFoundError') return [];
+    throw error;
+  }
+  const files: Promise<{ name: string; size: number }>[] = [];
+  for await (const handle of dir.values()) {
+    if (handle.kind === 'file') files.push((handle as FileSystemFileHandle).getFile().then((file) => ({ name: handle.name, size: file.size })));
+  }
+  return Promise.all(files);
 }
 
 export async function readJson<T>(path: string): Promise<T | null> {

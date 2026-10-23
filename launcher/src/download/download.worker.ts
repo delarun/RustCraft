@@ -1,12 +1,15 @@
 // Installs a game version into OPFS: version JSON, asset index, client jar,
 // libraries, logging config, the assets needed at startup (the rest are
 // fetched on first use, see src/jvm/opfs.ts) and Mojang's Java runtime for the
-// version, each verified against Mojang's hashes.
+// version, each verified against Mojang's hashes; optionally Fabric Loader's
+// profile and libraries, verified against the SHA-1s of Fabric's Maven.
 // Runs in a worker because synchronous OPFS access handles are worker-only and
 // hashing hundreds of megabytes should not block the UI.
 
 import { collectDownloads, isEagerAsset, type DownloadJob } from '../mojang/downloads';
+import { fabricProfileId, fabricProfileUrl, mergeProfile, type FabricProfile } from '../mojang/fabric';
 import { layout, OPFS_ROOT } from '../mojang/layout';
+import { repositoryUrl } from '../mojang/libraries';
 import { JAVA_RUNTIMES_URL, mirrorUrl } from '../mojang/mirror';
 import { BROWSER_PLATFORM } from '../mojang/rules';
 import { runtimeDownloads, selectRuntime, type RuntimeIndex, type RuntimeManifest } from '../mojang/runtime';
@@ -33,7 +36,7 @@ self.onmessage = (event: MessageEvent<InstallRequest>) => {
     return;
   }
   abort = new AbortController();
-  install(request.entry, request.full, abort.signal)
+  install(request.entry, request.full, request.fabricLoader, abort.signal)
     .catch((error: unknown) => post({ type: 'error', text: errorText(error), failures: [] }))
     .finally(() => (abort = null));
 };
@@ -42,11 +45,12 @@ function post(event: InstallEvent) {
   self.postMessage(event);
 }
 
-async function install(entry: VersionManifestEntry, full: boolean, signal: AbortSignal) {
+async function install(entry: VersionManifestEntry, full: boolean, fabricLoader: string | undefined, signal: AbortSignal) {
   post({ type: 'status', text: { key: 'installMetadata', args: [entry.id] } });
-  const version = parseJson<VersionJson>(
+  const vanilla = parseJson<VersionJson>(
     await fetchMetadata(entry.url, entry.sha1, layout.versionJson(entry.id), signal),
   );
+  const version = fabricLoader ? mergeProfile(vanilla, await fabricProfile(entry.id, fabricLoader, signal)) : vanilla;
   const index = version.assetIndex;
   const assets = parseJson<AssetIndex>(
     await fetchMetadata(index.url, index.sha1, layout.assetIndex(index.id), signal),
@@ -117,6 +121,46 @@ async function install(entry: VersionManifestEntry, full: boolean, signal: Abort
   } else {
     post({ type: 'done', versionId: version.id, runtime, ...progress });
   }
+}
+
+/**
+ * Fabric's profile for a loader build, with the SHA-1 and size of every
+ * library filled in (the profile omits them for some, e.g. fabric-loader
+ * itself): from the Maven's `.sha1` files and the jars' Content-Length. Saved
+ * completed, so an offline launch needs no Maven.
+ */
+async function fabricProfile(game: string, loader: string, signal: AbortSignal): Promise<FabricProfile> {
+  post({ type: 'status', text: { key: 'installFabric', args: [loader] } });
+  const path = layout.versionJson(fabricProfileId(game, loader));
+  try {
+    const profile = parseJson<FabricProfile>(await fetchVerified(fabricProfileUrl(game, loader), null, signal));
+    for (const lib of profile.libraries) {
+      if (!lib.url) continue;
+      const url = repositoryUrl(lib.url, lib.name);
+      lib.sha1 ??= await mavenSha1(url, signal);
+      lib.size ??= await contentLength(url, signal);
+    }
+    await writeFile(path, new TextEncoder().encode(JSON.stringify(profile)));
+    return profile;
+  } catch (error) {
+    if (signal.aborted) throw error;
+    const cached = await readFile(path);
+    if (cached) return parseJson<FabricProfile>(cached);
+    throw error;
+  }
+}
+
+async function mavenSha1(url: string, signal: AbortSignal): Promise<string> {
+  const text = new TextDecoder().decode(await fetchVerified(`${url}.sha1`, null, signal)).trim().slice(0, 40).toLowerCase();
+  if (!/^[0-9a-f]{40}$/.test(text)) throw new Error(`${url}.sha1: not a SHA-1`);
+  return text;
+}
+
+async function contentLength(url: string, signal: AbortSignal): Promise<number> {
+  const response = await fetch(mirrorUrl(url), { method: 'HEAD', signal });
+  const length = Number(response.headers.get('Content-Length'));
+  if (!response.ok || !length) throw new Error(`${url}: no size (HTTP ${response.status})`);
+  return length;
 }
 
 /** Metadata is always refetched when online, with the cached copy as offline fallback. */

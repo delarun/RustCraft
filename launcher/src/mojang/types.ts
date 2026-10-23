@@ -47,6 +47,13 @@ export interface Library {
   rules?: Rule[];
   /** Legacy (pre-1.19) native classifier mapping. */
   natives?: Record<string, string>;
+  /**
+   * Maven repository form (Fabric's profiles): the jar is at `url` + its maven
+   * path, with sha1 and size given only for some libraries.
+   */
+  url?: string;
+  sha1?: string;
+  size?: number;
 }
 
 export interface AssetIndexRef {
@@ -59,6 +66,8 @@ export interface AssetIndexRef {
 
 export interface VersionJson {
   id: string;
+  /** The version whose client jar to run (a profile merged with the version it inherits from). */
+  jar?: string;
   type: VersionType;
   mainClass: string;
   arguments?: {

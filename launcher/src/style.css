@@ -134,7 +134,7 @@ h2 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; color
 
 /* --- controls --------------------------------------------------------------- */
 
-select, input[type='text'] {
+select, input[type='text'], input[type='search'] {
   font: inherit;
   color: var(--text);
   background: var(--surface-2);
@@ -144,7 +144,7 @@ select, input[type='text'] {
   min-width: 0;
   transition: border-color 0.15s, background-color 0.15s;
 }
-select:hover, input[type='text']:hover { border-color: color-mix(in srgb, var(--border), var(--text) 25%); }
+select:hover, input[type='text']:hover, input[type='search']:hover { border-color: color-mix(in srgb, var(--border), var(--text) 25%); }
 input[type='text'] { font-family: var(--mono); font-size: 0.88rem; }
 
 .button {
@@ -189,6 +189,31 @@ input[type='text'] { font-family: var(--mono); font-size: 0.88rem; }
 .label { display: block; font-size: 0.86rem; color: var(--muted); margin-bottom: 6px; }
 .version-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 .version-row select { flex: 1 1 220px; font-size: 1rem; padding: 10px 12px; }
+
+/* Two or more radio buttons as one control (the mod loader). */
+.segmented {
+  display: inline-flex;
+  padding: 3px;
+  gap: 3px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+.segmented label { position: relative; cursor: pointer; }
+.segmented input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.segmented span {
+  display: block;
+  padding: 6px 16px;
+  border-radius: 6px;
+  font-size: 0.92rem;
+  font-weight: 500;
+  color: var(--muted);
+  transition: background-color 0.15s, color 0.15s;
+}
+.segmented label:hover span { color: var(--text); }
+.segmented input:checked + span { background: var(--surface-3); color: var(--text); box-shadow: inset 0 0 0 1px var(--border); }
+.segmented input:focus-visible + span { outline: 2px solid var(--focus); outline-offset: 1px; }
+.segmented input:disabled + span { opacity: 0.5; cursor: not-allowed; }
 
 .switch { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 0.9rem; cursor: pointer; user-select: none; }
 .switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
@@ -365,7 +390,8 @@ pre {
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  /* Six tiles: two rows of three, two columns on narrower screens. */
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
 }
 .privacy-grid li {
@@ -378,7 +404,8 @@ pre {
 .privacy-grid li:nth-child(2) { --dot: var(--rust); }
 .privacy-grid li:nth-child(3) { --dot: var(--focus); }
 .privacy-grid li:nth-child(4) { --dot: var(--ok); }
-.privacy-grid li:nth-child(5) { --dot: var(--warn); }
+.privacy-grid li:nth-child(5) { --dot: var(--rust); }
+.privacy-grid li:nth-child(6) { --dot: var(--warn); }
 .privacy-grid h3 {
   display: flex;
   align-items: center;
@@ -517,3 +544,43 @@ body.exited #game #console { display: block; max-height: 60vh; }
 .steps code { font-size: 0.85em; }
 #bridge-download { margin-top: 2px; }
 a.button { text-decoration: none; }
+
+/* --- mods ------------------------------------------------------------------------ */
+
+.subhead { margin: 4px 0 6px; font-size: 0.8rem; font-weight: 600; color: var(--muted); }
+.mod-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.mod-list:empty { display: none; }
+.mod-list > li.status { margin: 0; }
+.mod {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+.mod-icon { flex: none; width: 36px; height: 36px; border-radius: 8px; background: var(--surface-3); object-fit: cover; }
+.mod-text { display: flex; flex-direction: column; min-width: 0; flex: 1; line-height: 1.35; }
+.mod-text > * { overflow-wrap: anywhere; }
+.mod-text a { font-weight: 600; text-decoration: none; }
+.mod-text a:hover { text-decoration: underline; }
+.mod .button { flex: none; }
+#mods-results { margin-top: 10px; max-height: 420px; overflow: auto; }
+#mods-search { width: 100%; }
+.dropzone {
+  position: relative;
+  display: block;
+  margin-top: 10px;
+  padding: 14px;
+  text-align: center;
+  font-size: 0.88rem;
+  color: var(--muted);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: border-color 0.15s, background-color 0.15s;
+}
+.dropzone:hover, .dropzone.dragging { border-color: var(--accent); color: var(--text); background: color-mix(in srgb, var(--accent), transparent 92%); }
+.dropzone:focus-within { outline: 2px solid var(--focus); outline-offset: 2px; }
+.dropzone input { position: absolute; opacity: 0; width: 1px; height: 1px; }

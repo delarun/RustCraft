@@ -45,7 +45,7 @@ export function buildLaunchPlan(
   const { classpath: libraries, hostNatives } = resolveLibraries(version, platform);
   const classpath = [
     ...libraries.map((lib) => inGameDir(layout.library(lib.path))),
-    inGameDir(layout.clientJar(version.id)),
+    inGameDir(layout.clientJar(version.jar ?? version.id)),
   ];
 
   const vars: Record<string, string> = {

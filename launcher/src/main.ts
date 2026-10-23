@@ -6,6 +6,7 @@ import type { InstallEvent, InstallProgress } from './download/protocol';
 import { initLang, lang, LANGUAGES, onLangChange, setLang, t, tr, translate, type Lang, type MessageKey, type Text } from './i18n';
 import { errorText } from './i18n/error';
 import { manifestCompat, TESTED_VERSIONS, versionCompat, type Compat } from './mojang/compat';
+import { fabricProfileId, mergeProfile, type FabricProfile } from './mojang/fabric';
 import { buildLaunchPlan, type LaunchOptions, type LaunchPlan } from './mojang/launchPlan';
 import { layout } from './mojang/layout';
 import { parseMaven } from './mojang/maven';
@@ -14,6 +15,8 @@ import type { VersionJson, VersionManifest, VersionManifestEntry } from './mojan
 import { vmProcess } from './mojang/vm';
 import { clearDownloads, clearGameDir, readJson, requestPersistence, storageInfo, writeTextIfMissing, type StorageInfo } from './storage/opfs';
 import { AccountView } from './ui/account';
+import { LoaderView } from './ui/loader';
+import { ModsView } from './ui/mods';
 import { MultiplayerView } from './ui/multiplayer';
 import { $, formatBytes, prefs } from './ui/dom';
 import { runGame } from './ui/game';
@@ -69,6 +72,8 @@ let plan: LaunchPlan | null = null;
 let storage: StorageInfo | Text | null = null;
 const account = new AccountView(() => updatePlayButton());
 const multiplayer = new MultiplayerView();
+const mods = new ModsView(() => loader.render());
+const loader = new LoaderView(() => onLoaderChange(), () => mods.count);
 
 // --- environment ----------------------------------------------------------------
 
@@ -187,6 +192,8 @@ async function onVersionChange() {
   compatVersion = null;
   compatError = null;
   renderCompat();
+  if (entry) loader.setGameVersion(entry.id);
+  mods.setContext(entry?.id ?? '', loader.fabric);
   updatePlayButton();
   if (!entry) return;
   try {
@@ -196,14 +203,42 @@ async function onVersionChange() {
     compatVersion = version;
     renderCompat();
     updatePlayButton();
-    const installed = await readJson<VersionJson>(layout.versionJson(entry.id)).catch(() => null);
-    plan = installed ? makePlan(installed) : null;
-    renderPlan();
+    await refreshPlan();
   } catch (error) {
     compatError = { key: 'versionJsonFailed', args: [translate(errorText(error))] };
     renderCompat();
   }
   updatePlayButton();
+}
+
+function onLoaderChange() {
+  mods.setContext(ui.version.value, loader.fabric);
+  updatePlayButton();
+  void refreshPlan();
+}
+
+/** The installed version JSON, merged with the Fabric profile when launching through Fabric. */
+async function installedVersion(id: string, fabricLoader: string | undefined): Promise<VersionJson | null> {
+  const vanilla = await readJson<VersionJson>(layout.versionJson(id));
+  if (!vanilla || !fabricLoader) return vanilla;
+  const profile = await readJson<FabricProfile>(layout.versionJson(fabricProfileId(id, fabricLoader)));
+  return profile && mergeProfile(vanilla, profile);
+}
+
+/** The launch plan of what is installed for the selected version and loader. */
+async function refreshPlan() {
+  const id = ui.version.value;
+  const fabricLoader = loader.fabricLoader;
+  let next: LaunchPlan | null = null;
+  try {
+    const installed = id ? await installedVersion(id, fabricLoader) : null;
+    next = installed && makePlan(installed);
+  } catch {
+    // Not (completely) installed yet.
+  }
+  if (id !== ui.version.value || fabricLoader !== loader.fabricLoader) return;
+  plan = next;
+  renderPlan();
 }
 
 function renderCompat() {
@@ -227,6 +262,8 @@ function playProblem(): Text | null {
   if (environment) return environment;
   if (!manifest) return { key: 'noManifest' };
   if (compat?.level === 'unsupported') return { key: 'versionUnsupported', args: [ui.version.value] };
+  const loaderProblem = loader.problem();
+  if (loaderProblem) return loaderProblem;
   const accountProblem = account.problem();
   if (accountProblem) return { key: accountProblem };
   return ui.eula.checked ? null : { key: 'acceptEula' };
@@ -235,7 +272,8 @@ function playProblem(): Text | null {
 function updatePlayButton() {
   const problem = playProblem();
   ui.play.disabled = busy || problem !== null || compat === null;
-  ui.verify.disabled = busy || !selectedEntry();
+  ui.verify.disabled = busy || !selectedEntry() || loader.problem() !== null;
+  loader.disabled = busy;
   const hint = busy ? null : (problem ?? (compat?.level === 'untested' ? { key: 'untestedWarning' as const } : null));
   ui.playHint.textContent = hint ? translate(hint) : '';
 }
@@ -274,7 +312,7 @@ async function install(entry: VersionManifestEntry, full: boolean): Promise<bool
   ui.progress.hidden = false;
   showProgress({ totalFiles: 0, doneFiles: 0, skippedFiles: 0, totalBytes: 0, doneBytes: 0 });
   await requestPersistence().catch(() => false);
-  const result = await installer.install(entry, full, onInstallEvent);
+  const result = await installer.install(entry, full, loader.fabricLoader, onInstallEvent);
   ui.cancel.hidden = true;
   void showStorage();
   return result.type === 'done';
@@ -325,8 +363,9 @@ async function play() {
   try {
     setStatus({ key: 'checkingSignIn' });
     await account.ensureFresh();
+    const fabricLoader = loader.fabricLoader;
     if (!(await install(entry, false))) return;
-    const version = await readJson<VersionJson>(layout.versionJson(entry.id));
+    const version = await installedVersion(entry.id, fabricLoader);
     if (!version) throw new Error(t.versionJsonMissing);
     plan = makePlan(version);
     renderPlan();
@@ -404,6 +443,7 @@ async function clear(all: boolean) {
   if (!confirm(all ? t.confirmClearAll : t.confirmClearDownloads)) return;
   await (all ? clearGameDir() : clearDownloads());
   versionJsons.clear();
+  await mods.refresh();
   setStatus({ key: all ? 'clearedAll' : 'clearedDownloads' });
   await onVersionChange();
   await showStorage();

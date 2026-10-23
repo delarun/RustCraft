@@ -15,6 +15,11 @@ export const layout = {
   logConfig: (id: string) => `assets/log_configs/${id}`,
   runtimeManifest: (component: string) => `runtime/${component}.json`,
   runtimeFile: (component: string, path: string) => `runtime/${component}/${path}`,
+  /** Fabric Loader loads every jar here (the game sees it as /minecraft/mods). */
+  mods: 'mods',
+  mod: (file: string) => `mods/${file}`,
+  /** What the launcher knows about the mods it installed from Modrinth (Fabric reads only *.jar). */
+  modsManifest: 'mods/rustcraft-mods.json',
 };
 
 /** Top-level directories that hold downloads (everything else is the player's: saves, options, ...). */

@@ -40,7 +40,7 @@ export function collectDownloads(
 ): DownloadJob[] {
   const jobs: DownloadJob[] = [];
   const { client } = version.downloads;
-  jobs.push({ url: client.url, path: layout.clientJar(version.id), size: client.size, sha1: client.sha1, verify: 'sha1' });
+  jobs.push({ url: client.url, path: layout.clientJar(version.jar ?? version.id), size: client.size, sha1: client.sha1, verify: 'sha1' });
 
   for (const lib of resolveLibraries(version, platform).classpath) {
     const { url, size, sha1 } = lib.artifact;
