@@ -1,0 +1,17 @@
+# Build outputs and local state stay out of the build context.
+.git
+.github
+.scratch
+**/node_modules
+**/dist
+**/core
+**/core.[0-9]*
+**/*.log
+.e2e-profile
+**/.env.local
+**/.env.*.local
+bridge/target
+vm/target-*
+vm/target/**
+# ...except the VM built here (Dockerfile.prebuilt).
+!vm/target/wasm32-wasip1-threads/release/rjava.wasm

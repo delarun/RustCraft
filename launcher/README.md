@@ -78,6 +78,24 @@ TRUST_PROXY=1 STATIC_DIR=dist PORT=8080 node proxy/server.ts   # behind an HTTPS
 TLS_CERT=fullchain.pem TLS_KEY=privkey.pem STATIC_DIR=dist PORT=443 HOST=0.0.0.0 node proxy/server.ts
 ```
 
+### Docker and Kubernetes
+
+The repository root has two Dockerfiles that produce the same image: the built site
+and `proxy/server.ts` on Node, listening on port 8080 (`HOST=0.0.0.0`, `STATIC_DIR=/app/dist`).
+
+```sh
+docker build -t rustcraft .                              # everything from source (the first build takes long)
+docker build -f Dockerfile.prebuilt -t rustcraft .       # with vm/target/wasm32-wasip1-threads/release/rjava.wasm built here
+docker run -p 8080:8080 -e TRUST_PROXY=1 rustcraft
+```
+
+`Dockerfile` compiles the C/C++ libraries (`vm/native-libs`), then `rjava.wasm`, then the site;
+`--build-arg VITE_MS_CLIENT_ID=…` builds the site with another sign-in client ID. The container keeps
+no state and runs with a read-only file system. `deploy/kubernetes.yaml` is a Deployment and a Service
+for it, with probes on `/`. HTTPS must be in front (an Ingress, a Gateway or Cloudflare): the game needs
+a secure context. Behind it set `TRUST_PROXY=1`, and `ALLOWED_ORIGINS` if the page is served under
+another origin than `https://rustcraft.online`.
+
 The proxy (`proxy/proxy.ts`, tested in `proxy/proxy.test.ts`) is also what `pnpm dev` uses
 (`vite.config.ts`), so development and the site behave the same.
 

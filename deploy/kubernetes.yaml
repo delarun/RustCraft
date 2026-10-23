@@ -1,0 +1,59 @@
+# RustCraft in Kubernetes: a Deployment of the image built from ./Dockerfile
+# and a Service. Put HTTPS in front (an Ingress, Gateway or Cloudflare): the
+# game needs a secure context (SharedArrayBuffer). Set the image, then:
+#   kubectl apply -f deploy/kubernetes.yaml
+# The server keeps no state: scale replicas freely (rate limits are per pod).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rustcraft
+  labels: { app: rustcraft }
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: rustcraft }
+  template:
+    metadata:
+      labels: { app: rustcraft }
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000 # "node" in the image
+      containers:
+        - name: rustcraft
+          image: ghcr.io/delarun/rustcraft:latest # your registry
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            # Behind the ingress: take the client's address from
+            # X-Forwarded-For / CF-Connecting-IP for rate limits.
+            - name: TRUST_PROXY
+              value: "1"
+            # The page's origin(s), if not https://rustcraft.online.
+            # - name: ALLOWED_ORIGINS
+            #   value: "https://play.example.org"
+          readinessProbe:
+            httpGet: { path: /, port: http }
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /, port: http }
+            periodSeconds: 30
+          resources:
+            requests: { cpu: 100m, memory: 128Mi }
+            limits: { memory: 512Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rustcraft
+spec:
+  selector: { app: rustcraft }
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

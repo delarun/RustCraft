@@ -1,0 +1,27 @@
+# syntax=docker/dockerfile:1.7
+# RustCraft from an rjava.wasm built on this machine (see README, "Building"):
+#   (cd vm && cargo build --release -p rjava --target wasm32-wasip1-threads)
+#   docker build -f Dockerfile.prebuilt -t rustcraft .
+# The same image as Dockerfile, without compiling the VM and its C libraries.
+
+FROM node:24-slim AS site
+RUN corepack enable && corepack prepare pnpm@11.28.4 --activate
+WORKDIR /src/launcher
+COPY launcher/package.json launcher/pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
+COPY launcher ./
+COPY vm/target/wasm32-wasip1-threads/release/rjava.wasm /src/vm/target/wasm32-wasip1-threads/release/rjava.wasm
+ARG VITE_MS_CLIENT_ID=
+ENV VITE_MS_CLIENT_ID=$VITE_MS_CLIENT_ID
+RUN pnpm build
+
+FROM node:24-slim
+WORKDIR /app
+COPY --from=site /src/launcher/dist ./dist
+COPY launcher/proxy/server.ts launcher/proxy/proxy.ts ./proxy/
+COPY LICENSE ./
+ENV NODE_ENV=production STATIC_DIR=/app/dist HOST=0.0.0.0 PORT=8080
+USER node
+EXPOSE 8080
+HEALTHCHECK --interval=30s --timeout=5s CMD ["node", "-e", "fetch('http://127.0.0.1:'+process.env.PORT+'/').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
+CMD ["node", "proxy/server.ts"]
