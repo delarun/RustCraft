@@ -87,6 +87,8 @@ and `proxy/server.ts` on Node, listening on port 8080 (`HOST=0.0.0.0`, `STATIC_D
 docker build -t rustcraft .                              # everything from source (the first build takes long)
 docker build -f Dockerfile.prebuilt -t rustcraft .       # with vm/target/wasm32-wasip1-threads/release/rjava.wasm built here
 docker run -p 8080:8080 -e TRUST_PROXY=1 rustcraft
+# for other platforms (e.g. arm64 nodes), built on x86-64 without emulation, pushed to a registry:
+docker buildx build --platform linux/amd64,linux/arm64 -f Dockerfile.prebuilt -t <registry>/rustcraft --push .
 ```
 
 `Dockerfile` compiles the C/C++ libraries (`vm/native-libs`), then `rjava.wasm`, then the site;

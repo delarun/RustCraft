@@ -31,7 +31,8 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
     && cp target/wasm32-wasip1-threads/release/rjava.wasm /rjava.wasm
 
 # --- the site: launcher/dist ----------------------------------------------------
-FROM node:24-slim AS site
+# The site is the same on every platform: built natively, copied into each.
+FROM --platform=$BUILDPLATFORM node:24-slim AS site
 RUN corepack enable && corepack prepare pnpm@11.28.4 --activate
 WORKDIR /src/launcher
 COPY launcher/package.json launcher/pnpm-lock.yaml ./

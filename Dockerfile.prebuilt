@@ -4,7 +4,8 @@
 #   docker build -f Dockerfile.prebuilt -t rustcraft .
 # The same image as Dockerfile, without compiling the VM and its C libraries.
 
-FROM node:24-slim AS site
+# The site is the same on every platform: built natively, copied into each.
+FROM --platform=$BUILDPLATFORM node:24-slim AS site
 RUN corepack enable && corepack prepare pnpm@11.28.4 --activate
 WORKDIR /src/launcher
 COPY launcher/package.json launcher/pnpm-lock.yaml ./
