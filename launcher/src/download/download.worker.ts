@@ -36,7 +36,7 @@ self.onmessage = (event: MessageEvent<InstallRequest>) => {
     return;
   }
   abort = new AbortController();
-  install(request.entry, request.full, request.fabricLoader, abort.signal)
+  install(request.entry, request.full, request.fabricLoader, request.allAssets ?? false, abort.signal)
     .catch((error: unknown) => post({ type: 'error', text: errorText(error), failures: [] }))
     .finally(() => (abort = null));
 };
@@ -45,7 +45,7 @@ function post(event: InstallEvent) {
   self.postMessage(event);
 }
 
-async function install(entry: VersionManifestEntry, full: boolean, fabricLoader: string | undefined, signal: AbortSignal) {
+async function install(entry: VersionManifestEntry, full: boolean, fabricLoader: string | undefined, allAssets: boolean, signal: AbortSignal) {
   post({ type: 'status', text: { key: 'installMetadata', args: [entry.id] } });
   const vanilla = parseJson<VersionJson>(
     await fetchMetadata(entry.url, entry.sha1, layout.versionJson(entry.id), signal),
@@ -65,7 +65,7 @@ async function install(entry: VersionManifestEntry, full: boolean, fabricLoader:
   );
 
   const jobs = [
-    ...collectDownloads(version, assets, BROWSER_PLATFORM, isEagerAsset),
+    ...collectDownloads(version, assets, BROWSER_PLATFORM, allAssets ? () => true : isEagerAsset),
     ...runtimeDownloads(runtime, runtimeManifest),
   ];
   const progress: InstallProgress = {

@@ -5,6 +5,7 @@ import { Installer } from './download/installer';
 import type { InstallEvent, InstallProgress } from './download/protocol';
 import { initLang, lang, LANGUAGES, onLangChange, setLang, t, tr, translate, type Lang, type MessageKey, type Text } from './i18n';
 import { errorText } from './i18n/error';
+import { horizonClientUrl, horizonProcess, prepareHorizon } from './horizon';
 import { manifestCompat, TESTED_VERSIONS, versionCompat, type Compat } from './mojang/compat';
 import { fabricProfileId, mergeProfile, type FabricProfile } from './mojang/fabric';
 import { buildLaunchPlan, type LaunchOptions, type LaunchPlan } from './mojang/launchPlan';
@@ -305,14 +306,14 @@ function makePlan(version: VersionJson): LaunchPlan {
   return buildLaunchPlan(version, launchOptions());
 }
 
-async function install(entry: VersionManifestEntry, full: boolean): Promise<boolean> {
+async function install(entry: VersionManifestEntry, full: boolean, allAssets = false): Promise<boolean> {
   installer ??= new Installer();
   ui.cancel.hidden = false;
   ui.failures.hidden = true;
   ui.progress.hidden = false;
   showProgress({ totalFiles: 0, doneFiles: 0, skippedFiles: 0, totalBytes: 0, doneBytes: 0 });
   await requestPersistence().catch(() => false);
-  const result = await installer.install(entry, full, loader.fabricLoader, onInstallEvent);
+  const result = await installer.install(entry, full, loader.fabricLoader, onInstallEvent, allAssets);
   ui.cancel.hidden = true;
   void showStorage();
   return result.type === 'done';
@@ -364,9 +365,36 @@ async function play() {
     setStatus({ key: 'checkingSignIn' });
     await account.ensureFresh();
     const fabricLoader = loader.fabricLoader;
-    if (!(await install(entry, false))) return;
+    const horizon = loader.horizon;
+    // Horizon copies every sound and language: fetched now, in parallel, not one by one.
+    if (!(await install(entry, false, horizon !== null))) return;
     const version = await installedVersion(entry.id, fabricLoader);
     if (!version) throw new Error(t.versionJsonMissing);
+    if (horizon) {
+      // Horizon's own game, on resources it prepares from the files just installed.
+      ui.progress.hidden = false;
+      showFraction(0);
+      try {
+        await prepareHorizon(horizon, version, {
+          status: (line) => setStatus({ key: 'horizonPreparing', args: [line] }),
+          progress: showFraction,
+          log: (line, error) => (error ? console.warn : console.log)(`[horizon-prepare] ${line}`),
+        });
+      } catch (error) {
+        setStatus({ key: 'horizonFailedPrepare', args: [translate(errorText(error))] }, true);
+        return;
+      }
+      await runGame(
+        horizonProcess(horizon, launchOptions().username),
+        {
+          onStatus: (message) => setStatus({ key: 'text', args: [message] }),
+          onExit: (code) => setStatus({ key: 'gameExited', args: [code] }, code !== 0),
+        },
+        horizonClientUrl(horizon),
+      );
+      started = true;
+      return;
+    }
     plan = makePlan(version);
     renderPlan();
     await writeTextIfMissing('options.txt', DEFAULT_OPTIONS);
@@ -409,6 +437,13 @@ function renderPlan() {
     .args.map((arg, i, args) => (args[i - 1] === '--accessToken' ? t.hidden : arg))
     .map((arg) => (arg.includes(':/') ? arg.split(':').join(':\n    ') : arg))
     .join('\n  ');
+}
+
+/** Progress of a step that reports only how far it is (Horizon's preparation). */
+function showFraction(fraction: number) {
+  progress = null;
+  ui.progressFill.style.width = `${Math.min(100, fraction * 100)}%`;
+  ui.progressText.textContent = `${Math.round(fraction * 100)}%`;
 }
 
 function showProgress(p: InstallProgress) {

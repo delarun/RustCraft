@@ -19,6 +19,7 @@ export class Installer {
     full: boolean,
     fabricLoader: string | undefined,
     onEvent: (event: InstallEvent) => void,
+    allAssets = false,
   ): Promise<InstallResult> {
     return new Promise((resolve) => {
       this.listener = (event) => {
@@ -28,7 +29,7 @@ export class Installer {
           resolve(event);
         }
       };
-      this.send({ type: 'install', entry, full, fabricLoader });
+      this.send({ type: 'install', entry, full, fabricLoader, allAssets });
     });
   }
 

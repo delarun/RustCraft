@@ -107,6 +107,16 @@ export const ru: Messages = {
     `Fabric Loader ${loader}${offline ? ' (офлайн: последняя найденная сборка)' : ''} · модов: ${mods} (Настройки → Моды)`,
   loaderUnavailable: (game: S) => `У Fabric Loader пока нет сборки для ${game}. Чтобы играть в эту версию, выберите Vanilla.`,
   loaderFailed: (error: S) => `Не удалось связаться с meta.fabricmc.net: ${error}`,
+  loaderHorizon: 'Horizon',
+  horizonChecking: 'Ищу Horizon на этом сайте…',
+  horizonUnavailable: 'Сайт собран без Horizon.',
+  horizonFailed: (error: S) => `Не удалось загрузить описание Horizon: ${error}`,
+  horizonVersion: (version: S) => `Horizon играет только в Minecraft ${version}: выберите эту версию.`,
+  horizonReady: (version: S) =>
+    `Horizon: Minecraft ${version}, переписанный на Rust (github.com/horizon-rust/horizon, MIT), а не игра Mojang. ` +
+    'При первом запуске он готовит свои ресурсы из ваших файлов игры прямо в браузере (несколько минут); модов и мультиплеера пока нет.',
+  horizonPreparing: (step: S) => `Подготовка Horizon: ${step}`,
+  horizonFailedPrepare: (error: S) => `Horizon не смог подготовить ресурсы: ${error}`,
 
   // --- play ---
   playTitle: 'Игра',

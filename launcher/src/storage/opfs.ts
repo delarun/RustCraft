@@ -23,6 +23,21 @@ export async function readText(path: string): Promise<string | null> {
   }
 }
 
+/** A file's bytes; null when there is none. */
+export async function readFileBytes(path: string): Promise<Uint8Array<ArrayBuffer> | null> {
+  let dir = await gameDir();
+  const parts = path.split('/');
+  const name = parts.pop()!;
+  try {
+    for (const part of parts) dir = await dir.getDirectoryHandle(part);
+    const file = await (await dir.getFileHandle(name)).getFile();
+    return new Uint8Array(await file.arrayBuffer());
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'NotFoundError') return null;
+    throw error;
+  }
+}
+
 /** Writes a small file at `path` unless it exists; returns whether it wrote. */
 export async function writeTextIfMissing(path: string, text: string): Promise<boolean> {
   if ((await readText(path)) !== null) return false;

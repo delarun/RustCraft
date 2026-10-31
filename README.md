@@ -21,6 +21,9 @@ Website: <https://rustcraft.online>
 - Multiplayer works through **RustCraft Bridge** ([bridge/](bridge/README.md)), a small
   program the player runs on their computer: a web page cannot open TCP connections, so the
   game's sockets go over a WebSocket to the bridge, which connects to the server.
+- **Horizon** ([horizon-rust/horizon](https://github.com/horizon-rust/horizon), MIT), a
+  rewrite of Minecraft 26.3 in Rust, is the launcher's third choice next to Vanilla and
+  Fabric: a game of its own, built for the browser with wgpu over WebGPU ([horizon/](horizon/README.md)).
 
 ## How it works
 
@@ -44,6 +47,7 @@ vm/                the JVM (Rust)
   crates/jit-wasmtime  JIT backend for native development and tests (wasmtime)
   crates/rjava     the `rjava` launcher binary (native and wasm32-wasip1-threads)
   native-libs/     scripts that build the C/C++ libraries linked into rjava.wasm
+horizon/           Horizon's browser build: our changes to it (horizon-web.patch) and build.sh
 bridge/            RustCraft Bridge: a local WebSocket → TCP bridge for multiplayer (Rust, std only)
 ```
 

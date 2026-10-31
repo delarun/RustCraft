@@ -15,3 +15,6 @@ vm/target-*
 vm/target/**
 # ...except the VM built here (Dockerfile.prebuilt).
 !vm/target/wasm32-wasip1-threads/release/rjava.wasm
+# ...and Horizon built here (horizon/build.sh).
+!horizon/dist
+!horizon/dist/**

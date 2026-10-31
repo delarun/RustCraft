@@ -5,8 +5,10 @@ export type InstallRequest =
   /**
    * full: re-hash every present file (otherwise files of the right size are trusted).
    * fabricLoader: also install this Fabric Loader build and launch through it.
+   * allAssets: every asset now (sounds and languages too), not on first use (for Horizon,
+   * which copies them all).
    */
-  | { type: 'install'; entry: VersionManifestEntry; full: boolean; fabricLoader?: string }
+  | { type: 'install'; entry: VersionManifestEntry; full: boolean; fabricLoader?: string; allAssets?: boolean }
   | { type: 'cancel' };
 
 export interface InstallProgress {

@@ -11,6 +11,8 @@ WORKDIR /src/launcher
 COPY launcher/package.json launcher/pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 COPY launcher ./
+# Horizon, when horizon/build.sh made horizon/dist (optional: the site works without it).
+COPY horizon /src/horizon
 COPY vm/target/wasm32-wasip1-threads/release/rjava.wasm /src/vm/target/wasm32-wasip1-threads/release/rjava.wasm
 ARG VITE_MS_CLIENT_ID=
 ENV VITE_MS_CLIENT_ID=$VITE_MS_CLIENT_ID

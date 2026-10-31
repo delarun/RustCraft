@@ -44,10 +44,11 @@ export interface GameCallbacks {
   onExit(code: number): void;
 }
 
-export async function runGame(config: ProcessConfig, callbacks: GameCallbacks): Promise<JvmProcess> {
+/** Runs `wasmUrl` (our VM by default; Horizon's game is a program of its own) full-window. */
+export async function runGame(config: ProcessConfig, callbacks: GameCallbacks, wasmUrl = RJAVA_WASM_URL): Promise<JvmProcess> {
   callbacks.onStatus(tr('loadingJvm'));
-  const response = await fetch(RJAVA_WASM_URL);
-  if (!response.ok) throw new Error(`rjava.wasm: HTTP ${response.status}`);
+  const response = await fetch(wasmUrl);
+  if (!response.ok) throw new Error(`${wasmUrl.split('/').pop()}: HTTP ${response.status}`);
   const wasm = await response.arrayBuffer();
 
   const game = $('game');

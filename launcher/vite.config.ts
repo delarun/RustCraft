@@ -56,6 +56,42 @@ const rjavaWasmAsset = (): Plugin => ({
   },
 });
 
+// Horizon for the launcher's "Horizon" choice (horizon/build.sh), under /horizon/: served from
+// horizon/dist in development, shipped there by a build. Optional: without it the choice says so.
+const HORIZON_DIST = resolve(import.meta.dirname, '../horizon/dist');
+const HORIZON_FILES: Record<string, string> = {
+  'horizon.json': 'application/json',
+  'horizon-client.wasm': 'application/wasm',
+  'horizon-prepare.wasm': 'application/wasm',
+  'root.pack': 'application/octet-stream',
+  'LICENSE.txt': 'text/plain; charset=utf-8',
+};
+const horizon = (): Plugin => ({
+  name: 'horizon',
+  configureServer(server) {
+    server.middlewares.use('/horizon/', async (req, res, next) => {
+      const name = (req.url ?? '').split('?')[0].replace(/^\//, '');
+      const type = HORIZON_FILES[name];
+      const path = resolve(HORIZON_DIST, name);
+      const stat = type ? await fs.stat(path).catch(() => null) : null;
+      if (!stat) return next();
+      res.setHeader('Content-Type', type);
+      res.setHeader('Content-Length', stat.size);
+      res.setHeader('Cache-Control', 'no-cache');
+      createReadStream(path).pipe(res);
+    });
+  },
+  async generateBundle() {
+    if (!(await fs.stat(resolve(HORIZON_DIST, 'horizon.json')).catch(() => null))) {
+      this.warn(`${HORIZON_DIST} is not built (horizon/build.sh); the site will have no Horizon`);
+      return;
+    }
+    for (const name of Object.keys(HORIZON_FILES)) {
+      this.emitFile({ type: 'asset', fileName: `horizon/${name}`, source: await fs.readFile(resolve(HORIZON_DIST, name)) });
+    }
+  },
+});
+
 // Development only: read-only host files for the JVM's HTTP mounts (see
 // src/jvm/fs.ts) under /dev-fs/<absolute path>: `?stat`, `?list`, `?entries`
 // (names with stats), `?pack` (a directory's whole tree) or the bytes.
@@ -166,7 +202,7 @@ const devFs = (): Plugin => ({
 });
 
 export default defineConfig({
-  plugins: [corsProxy(), devFs(), rjavaWasm(), rjavaWasmAsset()],
+  plugins: [corsProxy(), devFs(), rjavaWasm(), rjavaWasmAsset(), horizon()],
   // jvm.html is the developer console: served by `pnpm dev`, not part of the site.
   build: { rollupOptions: { input: ['index.html'] } },
   // rustcraft.online may point at this machine during development (e.g.

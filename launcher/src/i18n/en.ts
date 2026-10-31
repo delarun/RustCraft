@@ -107,6 +107,16 @@ export const en = {
     `Fabric Loader ${loader}${offline ? ' (offline: the last build found)' : ''} · mods: ${mods} (Settings → Mods)`,
   loaderUnavailable: (game: S) => `Fabric Loader has no build for ${game} yet. Choose Vanilla to play this version.`,
   loaderFailed: (error: S) => `Could not reach meta.fabricmc.net: ${error}`,
+  loaderHorizon: 'Horizon',
+  horizonChecking: 'Looking for Horizon on this site…',
+  horizonUnavailable: 'This site was built without Horizon.',
+  horizonFailed: (error: S) => `Could not load Horizon’s description: ${error}`,
+  horizonVersion: (version: S) => `Horizon plays Minecraft ${version} only: choose that version.`,
+  horizonReady: (version: S) =>
+    `Horizon: Minecraft ${version} rewritten in Rust (github.com/horizon-rust/horizon, MIT), not Mojang’s game. ` +
+    'On first launch it prepares its resources from your game files here in the browser (a few minutes); no mods, no multiplayer yet.',
+  horizonPreparing: (step: S) => `Preparing Horizon: ${step}`,
+  horizonFailedPrepare: (error: S) => `Horizon could not prepare its resources: ${error}`,
 
   // --- play ---
   playTitle: 'Game',

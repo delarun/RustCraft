@@ -38,6 +38,8 @@ WORKDIR /src/launcher
 COPY launcher/package.json launcher/pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 COPY launcher ./
+# Horizon, when horizon/build.sh made horizon/dist (optional: the site works without it).
+COPY horizon /src/horizon
 # vite.config.ts takes rjava.wasm from the VM's build directory.
 COPY --from=vm /rjava.wasm /src/vm/target/wasm32-wasip1-threads/release/rjava.wasm
 # Optional: another Microsoft application (Azure) client ID for sign-in.
