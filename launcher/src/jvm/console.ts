@@ -4,12 +4,15 @@
 
 import { startAudio } from './audio';
 import { Display } from './display';
+import { ensurePack, type Preload } from './pack';
 import { JvmProcess } from './process';
 import { INPUT_BYTES, type ProcessConfig } from './protocol';
 
 export interface RunRequest extends ProcessConfig {
   /** URL of rjava.wasm. */
   wasm: string;
+  /** Server directories copied into OPFS before the program starts (mount them as `opfs`). */
+  preload?: Preload[];
 }
 
 const output = document.getElementById('console')!;
@@ -22,6 +25,12 @@ function show(text: string, stderr: boolean) {
 }
 
 async function runJvm(request: RunRequest): Promise<number> {
+  for (const preload of request.preload ?? []) {
+    await ensurePack(preload, (line) => {
+      show(line, false);
+      console.log(`[1] ${line}`);
+    });
+  }
   const wasm = await (await fetch(request.wasm)).arrayBuffer();
   const input = new SharedArrayBuffer(INPUT_BYTES);
   let process: JvmProcess | null = null;

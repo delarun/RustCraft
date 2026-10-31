@@ -58,7 +58,7 @@ const rjavaWasmAsset = (): Plugin => ({
 
 // Development only: read-only host files for the JVM's HTTP mounts (see
 // src/jvm/fs.ts) under /dev-fs/<absolute path>: `?stat`, `?list`, `?entries`
-// (names with stats) or the bytes.
+// (names with stats), `?pack` (a directory's whole tree) or the bytes.
 // Limited to the repository (the VM build, the JDK image and test files under
 // .scratch) and the local Prism Launcher libraries and assets.
 const DEV_FS_ROOTS = [
@@ -74,6 +74,31 @@ function isLocalRequest(req: { headers: Record<string, string | string[] | undef
     a === 'localhost' || a === '::1' || /^127\./.test(a) || /^10\./.test(a) || /^192\.168\./.test(a) || /^172\.(1[6-9]|2\d|3[01])\./.test(a);
   const remote = (req.socket.remoteAddress ?? '').replace(/^::ffff:/, '');
   return privateAddress(host) && privateAddress(remote);
+}
+
+/** Writes the files under `root` to `out` as a pack (see dev-fs `?pack`). */
+async function sendPack(root: string, out: ServerResponse) {
+  const write = (chunk: Uint8Array) =>
+    out.write(chunk) ? Promise.resolve() : new Promise<void>((done) => out.once('drain', () => done()));
+  const walk = async (dir: string, prefix: string) => {
+    for (const entry of await fs.readdir(dir, { withFileTypes: true })) {
+      const path = `${dir}/${entry.name}`;
+      const name = `${prefix}${entry.name}`;
+      if (entry.isDirectory()) {
+        await walk(path, `${name}/`);
+      } else if (entry.isFile()) {
+        const data = await fs.readFile(path);
+        const encoded = new TextEncoder().encode(name);
+        const header = new DataView(new ArrayBuffer(8 + encoded.length));
+        header.setUint32(0, encoded.length, true);
+        new Uint8Array(header.buffer).set(encoded, 4);
+        header.setUint32(4 + encoded.length, data.length, true);
+        await write(new Uint8Array(header.buffer));
+        await write(data);
+      }
+    }
+  };
+  await walk(root, '');
 }
 
 const devFs = (): Plugin => ({
@@ -102,6 +127,13 @@ const devFs = (): Plugin => ({
       } else if (url.searchParams.has('stat')) {
         res.setHeader('Content-Type', 'application/json');
         res.end(JSON.stringify({ kind: stat?.isFile() ? 'file' : 'dir', size: stat?.size ?? 0, mtime: stat?.mtimeMs ?? 0 }));
+      } else if (url.searchParams.has('pack') && stat?.isDirectory()) {
+        // The whole tree in one response (src/jvm/pack.worker.ts reads it):
+        // per file a u32 path length, the UTF-8 path, a u32 size, the bytes
+        // (little-endian).
+        res.setHeader('Content-Type', 'application/octet-stream');
+        await sendPack(path, res);
+        res.end();
       } else if (url.searchParams.has('entries')) {
         // A directory's names with their stats, in one request.
         const names = stat?.isDirectory()
