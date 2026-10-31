@@ -14,6 +14,12 @@ mod sampler;
 fn main() -> ExitCode {
     #[cfg(target_family = "wasm")]
     reserve_memory();
+    // WASI starts every program in /: the launcher names the working directory
+    // (user.dir, and what relative paths resolve against) in $PWD.
+    #[cfg(target_family = "wasm")]
+    if let Some(dir) = std::env::var_os("PWD").filter(|d| std::path::Path::new(d).is_absolute()) {
+        let _ = std::env::set_current_dir(dir);
+    }
     let mut args = std::env::args().skip(1);
     let mut classpath = Vec::new();
     let mut modules = std::env::var_os("RJAVA_MODULES").map(PathBuf::from);

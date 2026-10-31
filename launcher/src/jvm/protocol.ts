@@ -60,7 +60,9 @@ export type MountSpec =
   /** HTTP files with writes kept in memory. */
   | { path: string; kind: 'overlay'; url: string }
   /** A directory of the origin private file system (see opfs.ts). */
-  | { path: string; kind: 'opfs'; root: string; readonly?: boolean; lazy?: LazyObjects };
+  | { path: string; kind: 'opfs'; root: string; readonly?: boolean; lazy?: LazyObjects; shared?: boolean };
+
+// `shared`: other processes (children, see children.ts) open the same files at once.
 
 /** Content-addressed files fetched on first use (see opfs.ts): `<dir>/<xx>/<sha1>`
  *  for the hashes listed in an asset index (`objects` of `index`), from `<url>/<xx>/<sha1>`. */
@@ -68,6 +70,12 @@ export interface LazyObjects {
   dir: string;
   index: string;
   url: string;
+}
+
+/** What a process may start as a child (see children.ts): another program on the same files. */
+export interface ChildPrograms {
+  /** By the name the parent asks for (`java`): its wasm URL and the arguments before the child's own. */
+  [program: string]: { wasm: string; args: string[]; env?: Record<string, string> };
 }
 
 export interface ProcessConfig {
@@ -78,11 +86,17 @@ export interface ProcessConfig {
   initialPages?: number;
   /** ws://host:port of rustcraft-bridge, for TCP connections (see net.ts). */
   netBridge?: string;
+  /** Programs it may start (rc_proc imports); none by default. */
+  children?: ChildPrograms;
+  /** Standard input is a pipe the page writes (JvmProcess.writeStdin); else it is empty. */
+  stdin?: boolean;
 }
 
 // Messages.
 export type ToIo =
-  | { type: 'init'; memory: WebAssembly.Memory; control: SharedArrayBuffer; mounts: MountSpec[] }
+  | { type: 'init'; memory: WebAssembly.Memory; control: SharedArrayBuffer; mounts: MountSpec[]; stdin: boolean }
+  /** Input for the stdin pipe; null closes it. */
+  | { type: 'stdin'; data: Uint8Array | null }
   | { type: 'port'; tid: number; port: MessagePort }
   /** Answered with 'synced' after all output sent before it. */
   | { type: 'sync' };
@@ -111,7 +125,18 @@ export type FromThread =
   | { type: 'done'; tid: number }
   | { type: 'error'; tid: number; message: string }
   | NetMessage
+  | ProcMessage
   | DisplayMessage;
+
+/** A call of the rc_proc import (see children.ts): a JSON request, a buffer in the caller's
+ *  memory, and the cell the page writes the result to (the caller waits on it). */
+export interface ProcMessage {
+  type: 'proc';
+  request: string;
+  buffer: number;
+  capacity: number;
+  cell: number;
+}
 
 /** From a VM thread to the page's NetBridge (see net.ts). */
 export type NetMessage =

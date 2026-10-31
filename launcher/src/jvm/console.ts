@@ -47,6 +47,7 @@ async function runJvm(request: RunRequest): Promise<number> {
       },
       onExit(code) {
         show(`— exit ${code}`, code !== 0);
+        console.log(`[1] — exit ${code}`);
         resolve(code);
       },
       onError(message) {

@@ -32,7 +32,7 @@ interface SyncAccess {
   flush(): void;
   close(): void;
 }
-type SyncCapable = FileSystemFileHandle & { createSyncAccessHandle(): Promise<SyncAccess> };
+type SyncCapable = FileSystemFileHandle & { createSyncAccessHandle(options?: { mode?: string }): Promise<SyncAccess> };
 type Movable = FileSystemHandle & { move(parent: FileSystemDirectoryHandle, name: string): Promise<void> };
 
 interface OpenFile {
@@ -58,6 +58,8 @@ function errno(error: unknown): never {
 
 export class OpfsBackend implements Backend {
   readonly readonly: boolean;
+  /** Access handles other processes may hold at once (`readwrite-unsafe`, Chrome 121+). */
+  private mode: { mode?: string } | undefined;
   private lazy?: LazyObjects;
   private dirs = new Map<string, Promise<FileSystemDirectoryHandle>>();
   private files = new Map<string, OpenFile>();
@@ -68,9 +70,10 @@ export class OpfsBackend implements Backend {
 
   constructor(
     private root: string,
-    options: { readonly?: boolean; lazy?: LazyObjects } = {},
+    options: { readonly?: boolean; lazy?: LazyObjects; shared?: boolean } = {},
   ) {
     this.readonly = options.readonly ?? false;
+    this.mode = options.shared ? { mode: 'readwrite-unsafe' } : undefined;
     this.lazy = options.lazy;
   }
 
@@ -176,7 +179,7 @@ export class OpfsBackend implements Backend {
       // Another descriptor may have opened it meanwhile.
       file = this.files.get(path);
       if (!file) {
-        const access = await (entry as SyncCapable).createSyncAccessHandle().catch(errno);
+        const access = await (entry as SyncCapable).createSyncAccessHandle(this.mode).catch(errno);
         file = this.files.get(path);
         if (file) access.close();
         else {
@@ -302,7 +305,7 @@ export class OpfsBackend implements Backend {
     try {
       await (source as unknown as Movable).move(targetDir, basename(to));
     } catch (error) {
-      if (open) open.access = await (source as unknown as SyncCapable).createSyncAccessHandle();
+      if (open) open.access = await (source as unknown as SyncCapable).createSyncAccessHandle(this.mode);
       if (open) this.files.set(from, open);
       if (error instanceof TypeError && !('move' in source)) throw new FsError(NOTSUP);
       errno(error);
@@ -311,7 +314,7 @@ export class OpfsBackend implements Backend {
       this.forget(from);
     } else if (open) {
       const moved = await targetDir.getFileHandle(basename(to)).catch(errno);
-      open.access = await (moved as SyncCapable).createSyncAccessHandle().catch(errno);
+      open.access = await (moved as SyncCapable).createSyncAccessHandle(this.mode).catch(errno);
       open.path = to;
       this.files.set(to, open);
     }
@@ -371,7 +374,7 @@ export class OpfsBackend implements Backend {
         for (const name of [basename(lazy.dir), hash.slice(0, 2)]) dir = await dir.getDirectoryHandle(name, { create: true });
         // Write under a temporary name so an interrupted download never looks complete.
         const partial = `${hash}.part`;
-        const access = await ((await dir.getFileHandle(partial, { create: true })) as SyncCapable).createSyncAccessHandle();
+        const access = await ((await dir.getFileHandle(partial, { create: true })) as SyncCapable).createSyncAccessHandle(this.mode);
         try {
           access.truncate(0);
           access.write(data, { at: 0 });

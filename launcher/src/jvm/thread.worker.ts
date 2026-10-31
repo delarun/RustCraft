@@ -278,12 +278,24 @@ async function run(start: ThreadStart) {
     noJspi,
   });
 
+  // Child processes (children.ts): the page answers through `cell`, which this thread waits on.
+  const PENDING = -0x80000000;
+  const proc = {
+    call(pointer: number, length: number, buffer: number, capacity: number, cell: number) {
+      const request = new TextDecoder().decode(bytes().slice(pointer >>> 0, (pointer >>> 0) + length));
+      post({ type: 'proc', request, buffer: buffer >>> 0, capacity: capacity >>> 0, cell: cell >>> 0 });
+      const cells = new Int32Array(memory.buffer);
+      while (Atomics.load(cells, (cell >>> 0) / 4) === PENDING) Atomics.wait(cells, (cell >>> 0) / 4, PENDING);
+    },
+  };
+
   try {
     const instance = new WebAssembly.Instance(start.module, {
       env: { memory },
       wasi_snapshot_preview1: wasi,
       wasi: { 'thread-spawn': spawn },
       rjava_jit: jit,
+      rc_proc: proc,
       ...platform,
       // (Suspending imports are valid import values; TypeScript's lib predates JSPI.)
     } as unknown as WebAssembly.Imports);

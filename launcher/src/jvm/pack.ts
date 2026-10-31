@@ -15,10 +15,12 @@ export type PackMessage =
   | { type: 'error'; message: string };
 
 export interface Preload {
-  /** The directory on a dev-fs style server (`?stat`, `?pack`). */
+  /** The directory on a dev-fs style server (`?stat`, `?pack`); with `tag`, a pack file. */
   url: string;
   /** The OPFS directory (slash-separated) that holds the copy. */
   root: string;
+  /** The pack file's version (e.g. its digest): copied again when it changes. */
+  tag?: string;
 }
 
 const TAG_FILE = '.pack-tag';
@@ -34,12 +36,15 @@ async function directory(root: string, create: boolean): Promise<FileSystemDirec
 }
 
 /** Copies `url` into `root` unless the copy there is current; reports progress lines. */
-export async function ensurePack({ url, root }: Preload, report: (line: string) => void): Promise<void> {
-  // The directory's modification time and its listing: a file added,
-  // removed or replaced changes one or the other.
-  const [stat, list] = await Promise.all([fetch(`${url}?stat`), fetch(`${url}?list`)]);
-  if (!stat.ok) throw new Error(`${url}: HTTP ${stat.status}`);
-  const tag = `${JSON.stringify(await stat.json())} ${(await list.text()).length}`;
+export async function ensurePack({ url, root, tag: packTag }: Preload, report: (line: string) => void): Promise<void> {
+  let tag = packTag;
+  if (tag === undefined) {
+    // The directory's modification time and its listing: a file added,
+    // removed or replaced changes one or the other.
+    const [stat, list] = await Promise.all([fetch(`${url}?stat`), fetch(`${url}?list`)]);
+    if (!stat.ok) throw new Error(`${url}: HTTP ${stat.status}`);
+    tag = `${JSON.stringify(await stat.json())} ${(await list.text()).length}`;
+  }
   const existing = await directory(root, false);
   const old = await existing
     ?.getFileHandle(TAG_FILE)
@@ -72,7 +77,7 @@ export async function ensurePack({ url, root }: Preload, report: (line: string) 
       }
     };
     worker.onerror = (event) => reject(new Error(event.message));
-    worker.postMessage({ url: new URL(`${url}?pack`, location.href).href, root } satisfies PackRequest);
+    worker.postMessage({ url: new URL(packTag === undefined ? `${url}?pack` : url, location.href).href, root } satisfies PackRequest);
   });
   const dir = await directory(root, true);
   const writable = await (await dir!.getFileHandle(TAG_FILE, { create: true })).createWritable();

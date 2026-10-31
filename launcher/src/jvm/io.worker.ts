@@ -38,6 +38,17 @@ const fds = new Map<number, Fd>([
 ]);
 let nextFd = PREOPEN + 1;
 
+/** The stdin pipe (ProcessConfig.stdin): what the page wrote and nobody read yet. */
+let stdinPipe = false;
+let stdinClosed = false;
+const stdinChunks: Uint8Array[] = [];
+let stdinWaiters: (() => void)[] = [];
+const wakeStdin = () => {
+  const waiters = stdinWaiters;
+  stdinWaiters = [];
+  for (const wake of waiters) wake();
+};
+
 const post = (message: FromIo, transfer: Transferable[] = []) => self.postMessage(message, transfer);
 
 self.onmessage = async (event: MessageEvent<ToIo>) => {
@@ -46,6 +57,7 @@ self.onmessage = async (event: MessageEvent<ToIo>) => {
     memory = message.memory;
     control = new Int32Array(message.control);
     controlArgs = new BigInt64Array(message.control);
+    stdinPipe = message.stdin;
     mounts = await Promise.all(message.mounts.map(async (spec) => [normalize(spec.path), await backendFor(spec)] as [string, Backend]));
     if (!mounts.some(([path]) => path === '/')) mounts.push(['/', new MemoryBackend()]);
     if (!mounts.some(([path]) => path === '/dev')) mounts.push(['/dev', new DeviceBackend()]);
@@ -53,6 +65,10 @@ self.onmessage = async (event: MessageEvent<ToIo>) => {
     post({ type: 'ready' });
   } else if (message.type === 'sync') {
     post({ type: 'synced' });
+  } else if (message.type === 'stdin') {
+    if (message.data) stdinChunks.push(message.data);
+    else stdinClosed = true;
+    wakeStdin();
   } else {
     const { tid, port } = message;
     port.onmessage = () => void serve(tid);
@@ -73,7 +89,7 @@ async function backendFor(spec: MountSpec): Promise<Backend> {
     case 'overlay':
       return new OverlayBackend(new HttpBackend(spec.url));
     case 'opfs':
-      return new OpfsBackend(spec.root, { readonly: spec.readonly, lazy: spec.lazy });
+      return new OpfsBackend(spec.root, { readonly: spec.readonly, lazy: spec.lazy, shared: spec.shared });
   }
 }
 
@@ -243,10 +259,25 @@ const calls: Record<(typeof IO_CALLS)[number], (a: bigint[]) => number | Promise
     return ERRNO.SUCCESS;
   },
 
-  fd_read([fd, iovs, count, out]) {
+  async fd_read([fd, iovs, count, out]) {
     const entry = fdOf(fd);
     let total = 0;
-    if (entry.kind === 'file') {
+    if (entry.kind === 'stdio' && entry.fd === 0 && stdinPipe) {
+      while (!stdinChunks.length && !stdinClosed) await new Promise<void>((wake) => stdinWaiters.push(wake));
+      for (const buffer of iovecs(iovs, count)) {
+        let at = 0;
+        while (at < buffer.length && stdinChunks.length) {
+          const chunk = stdinChunks[0];
+          const n = Math.min(chunk.length, buffer.length - at);
+          buffer.set(chunk.subarray(0, n), at);
+          at += n;
+          if (n === chunk.length) stdinChunks.shift();
+          else stdinChunks[0] = chunk.subarray(n);
+        }
+        total += at;
+        if (at < buffer.length) break;
+      }
+    } else if (entry.kind === 'file') {
       for (const buffer of iovecs(iovs, count)) {
         const n = entry.handle.read(entry.position, buffer);
         entry.position += n;
@@ -256,7 +287,7 @@ const calls: Record<(typeof IO_CALLS)[number], (a: bigint[]) => number | Promise
     } else if (entry.kind === 'dir') {
       return ERRNO.ISDIR;
     }
-    // stdin: end of input.
+    // stdin without a pipe: end of input.
     view().setUint32(u32(out), total, true);
     return ERRNO.SUCCESS;
   },

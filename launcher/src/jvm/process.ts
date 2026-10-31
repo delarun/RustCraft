@@ -14,11 +14,14 @@ import {
   type ThreadStart,
   type ToIo,
 } from './protocol';
+import { Children } from './children';
 import { NetBridge } from './net';
 
 export interface ProcessCallbacks {
   /** Complete lines written to stdout (1) or stderr (2). */
   onOutput(fd: number, line: string): void;
+  /** Output as written, before it is cut into lines. */
+  onData?(fd: number, data: Uint8Array): void;
   onExit(code: number): void;
   /** A worker failed (a trap ends the process; I/O errors are reported). */
   onError(message: string): void;
@@ -36,6 +39,7 @@ export class JvmProcess {
   private exited = false;
   private net: NetBridge;
   private exitCode = 0;
+  private children: Children | null = null;
 
   private constructor(
     private module: WebAssembly.Module,
@@ -47,6 +51,9 @@ export class JvmProcess {
   ) {
     this.memory = new WebAssembly.Memory({ ...limits, shared: true });
     this.net = new NetBridge(this.memory, config.netBridge);
+    if (config.children) {
+      this.children = new Children(this.memory, config.children, config.mounts, (line) => callbacks.onOutput(2, line));
+    }
     this.io = new Worker(new URL('./io.worker.ts', import.meta.url), { type: 'module', name: 'jvm io' });
     this.io.onmessage = (event: MessageEvent<FromIo>) => this.fromIo(event.data);
     this.io.onerror = (event) => this.fail(`I/O worker: ${event.message}`);
@@ -79,13 +86,19 @@ export class JvmProcess {
           ready?.call(this.io, event);
         }
       };
-      this.toIo({ type: 'init', memory: this.memory, control: this.control, mounts: this.config.mounts });
+      this.toIo({ type: 'init', memory: this.memory, control: this.control, mounts: this.config.mounts, stdin: this.config.stdin ?? false });
     });
+  }
+
+  /** Writes to the process's stdin pipe (ProcessConfig.stdin); null closes it. */
+  writeStdin(data: Uint8Array | null) {
+    if (!this.exited) this.toIo({ type: 'stdin', data });
   }
 
   kill() {
     if (this.exited) return;
     this.exited = true;
+    this.children?.killAll();
     this.stopThreads();
     this.io.terminate();
   }
@@ -145,6 +158,14 @@ export class JvmProcess {
       case 'net-kick':
         this.net.kick(message.block);
         break;
+      case 'proc':
+        if (this.children) this.children.handle(message);
+        else {
+          const cells = new Int32Array(this.memory.buffer);
+          Atomics.store(cells, message.cell / 4, -52);
+          Atomics.notify(cells, message.cell / 4);
+        }
+        break;
       default:
         this.callbacks.onDisplay?.(message);
     }
@@ -152,6 +173,7 @@ export class JvmProcess {
 
   private fromIo(message: FromIo) {
     if (message.type === 'output') {
+      this.callbacks.onData?.(message.fd, message.data);
       const index = message.fd - 1;
       const text = this.pending[index] + this.decoders[index].decode(message.data, { stream: true });
       const lines = text.split('\n');
@@ -175,6 +197,7 @@ export class JvmProcess {
     if (this.exited) return;
     this.exited = true;
     this.exitCode = code;
+    this.children?.killAll();
     this.stopThreads();
     // Output the I/O worker has yet to send arrives before its reply.
     this.toIo({ type: 'sync' });
