@@ -26,6 +26,13 @@ function nextTask(): Promise<void> {
   });
 }
 
+/** Resolves at the display's next refresh (a worker's requestAnimationFrame
+ *  follows the page's), else in a new task. */
+function nextFrame(): Promise<void> {
+  const raf = (self as { requestAnimationFrame?: (callback: () => void) => number }).requestAnimationFrame;
+  return raf ? new Promise((resolve) => raf(() => resolve())) : nextTask();
+}
+
 /** Drops null fields of objects (WebGPU reads null as a value), recursively. */
 function clean<T>(value: T): T {
   if (Array.isArray(value)) return value.map(clean) as T;
@@ -601,11 +608,14 @@ export function gpuImports(host: GpuHost) {
     }),
     // Presenting suspends the thread for a turn of this worker's event loop:
     // the browser frees transferred frames there (see platform.ts).
+    // Then waits for the display's next refresh: wgpu's Fifo. Without it a
+    // program draws as fast as the page takes frames (250+ a second while
+    // Horizon loads), and the page and the GPU process lag behind it.
     surface_present: new WebAssembly.Suspending(async (surface: number) => {
       const s = get(surface) as Surface;
       if (s.texture && s.device) await readBack(s);
       host.present(s.window, s.canvas);
-      await nextTask();
+      await nextFrame();
     }),
   };
 

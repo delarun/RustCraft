@@ -51,6 +51,8 @@ try {
     client.on('Log.entryAdded', ({ entry }) => process.stderr.write(`[browser ${entry.source} ${entry.level}] ${entry.text}\n`));
     void client.send('Log.enable').catch(() => {});
   });
+  // WORKER_COUNT=1: how many workers the page has made, every 10 s.
+  if (process.env.WORKER_COUNT) setInterval(() => process.stderr.write(`[e2e] ${workers.length} workers created\n`), 10_000).unref();
   // No hot reload (vite's client talks over a WebSocket): editing sources
   // must not restart the program mid-run.
   await page.evaluateOnNewDocument(() => {
