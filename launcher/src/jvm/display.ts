@@ -32,7 +32,7 @@ const MOD_OF: Record<string, number> = {
 const MAX_PIXELS = 4096;
 
 /** SDL_SystemCursor → CSS cursor. */
-const CURSORS = ['default', 'text', 'wait', 'crosshair', 'progress', 'nwse-resize', 'nesw-resize', 'ew-resize', 'ns-resize', 'move', 'not-allowed', 'pointer'];
+const CURSORS = ['default', 'text', 'wait', 'crosshair', 'progress', 'nwse-resize', 'nesw-resize', 'ew-resize', 'ns-resize', 'move', 'not-allowed', 'pointer', 'none'];
 
 export class Display {
   private canvas = document.createElement('canvas');
@@ -171,7 +171,9 @@ export class Display {
       const bit = MOD_OF[e.code] ?? 0;
       this.mods = down ? this.mods | bit : this.mods & ~bit;
       const mods = this.mods | (e.getModifierState('CapsLock') ? MOD.CAPS : 0) | (e.getModifierState('NumLock') ? MOD.NUM : 0);
-      this.event(1, scancode, down ? 1 : 0, e.repeat ? 1 : 0, mods);
+      // The key's character as the layout gives it (one code point, else 0).
+      const char = [...e.key].length === 1 ? e.key.codePointAt(0)! : 0;
+      this.event(1, scancode, down ? 1 : 0, e.repeat ? 1 : 0, mods, char);
       if (down && e.key.length === 1 && !e.ctrlKey && !e.metaKey) this.text(e.key);
       // Keep keys for the game, except the browser's own reload/devtools/fullscreen.
       if (!['F5', 'F11', 'F12'].includes(e.code) && !(e.ctrlKey && ['KeyR', 'KeyW', 'KeyT'].includes(e.code))) e.preventDefault();

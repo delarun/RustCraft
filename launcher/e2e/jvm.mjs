@@ -65,7 +65,7 @@ try {
   await page.goto(`${URL}jvm.html`);
   await page.waitForFunction(() => typeof window.runJvm === 'function');
   const env = Object.fromEntries(
-    Object.entries(process.env).filter(([key]) => key.startsWith('RJAVA_')),
+    Object.entries(process.env).filter(([key]) => key.startsWith('RJAVA_') || key.startsWith('HORIZON_') || key.startsWith('RUST_')),
   );
   // SCREENSHOTS=<dir>: a screenshot of the page every 20 seconds.
   const shots = process.env.SCREENSHOTS;
@@ -107,7 +107,9 @@ try {
     (request) => window.runJvm(request),
     {
       wasm,
-      args: ['rjava', '--modules', `${repo}/.scratch/jre25/lib/modules`, ...args],
+      // RAW=1: the arguments are the whole command line of another WASI
+      // program (WASM=...), not a Java one.
+      args: process.env.RAW ? args : ['rjava', '--modules', `${repo}/.scratch/jre25/lib/modules`, ...args],
       env: { PWD: '/work', HOME: '/work', ...env },
       // NET_BRIDGE: rustcraft-bridge's address (TCP connections).
       netBridge: process.env.NET_BRIDGE ?? 'ws://127.0.0.1:25580',

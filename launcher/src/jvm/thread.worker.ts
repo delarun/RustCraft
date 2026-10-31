@@ -19,6 +19,9 @@ import {
 
 declare const self: DedicatedWorkerGlobalScope;
 
+// Traps carry the program's stack: deep ones (a Rust panic's) need room.
+(Error as { stackTraceLimit?: number }).stackTraceLimit = 64;
+
 /** Thrown by proc_exit to unwind the wasm stack. */
 class Exit {
   constructor(readonly code: number) {}
@@ -200,6 +203,8 @@ async function run(start: ThreadStart) {
       throw new Exit(code);
     },
     sock_accept: () => ERRNO.NOSYS,
+    path_link: () => ERRNO.NOSYS,
+    path_readlink: () => ERRNO.NOSYS,
     sock_shutdown: () => ERRNO.NOSYS,
   };
   IO_CALLS.forEach((name, op) => (wasi[name] = forward(op)));
@@ -269,6 +274,7 @@ async function run(start: ThreadStart) {
     free: (pointer) => vm.free(pointer),
     debugGl: start.env.some((e) => e.startsWith('RJAVA_GL_DEBUG=')),
     stats: start.env.some((e) => e.startsWith('RJAVA_WEB_STATS=')),
+    gpuReadback: start.env.some((e) => e.startsWith('RJAVA_GPU_READBACK=')),
     noJspi,
   });
 

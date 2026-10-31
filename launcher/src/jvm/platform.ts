@@ -4,6 +4,7 @@
 // comes from the page through the shared input block.
 
 import { GlEmulation } from './gl';
+import { gpuImports } from './gpu';
 import { Memory } from './memory';
 import { INPUT, type DisplayMessage, type NetMessage } from './protocol';
 
@@ -21,6 +22,8 @@ export interface PlatformHost {
   debugGl?: boolean;
   /** Log frames per second (RJAVA_WEB_STATS). */
   stats?: boolean;
+  /** WebGPU frames read back, not shown from a canvas (RJAVA_GPU_READBACK; see gpu.ts). */
+  gpuReadback?: boolean;
   /** Present without suspending (RJAVA_NO_JSPI: for the profiler, which does
    *  not see suspendable stacks; leaks frames). */
   noJspi?: boolean;
@@ -57,6 +60,25 @@ export function platformImports(host: PlatformHost) {
       canvas.width = width;
       canvas.height = height;
     }
+  };
+
+  /** Sends what `canvas` holds to the page as window `id`'s frame. */
+  const sendFrame = (id: number, canvas: OffscreenCanvas) => {
+    // Pace to the page: wait while too many frames are on their way.
+      while (framesSent - Atomics.load(input, INPUT.FRAMES_SHOWN) >= MAX_FRAMES_IN_FLIGHT) {
+        if (Atomics.wait(input, INPUT.FRAMES_SHOWN, Atomics.load(input, INPUT.FRAMES_SHOWN), 100) === 'timed-out') break;
+      }
+      if (host.stats) {
+        const now = performance.now();
+        if (now - statsSince >= 10_000) {
+          console.log(`[stats] ${((framesSent - statsFrames) * 1000 / (now - statsSince)).toFixed(1)} fps`);
+          statsSince = now;
+          statsFrames = framesSent;
+        }
+      }
+    const bitmap = canvas.transferToImageBitmap();
+    framesSent++;
+    host.post({ type: 'frame', id, bitmap }, [bitmap]);
   };
 
   const web = {
@@ -120,21 +142,7 @@ export function platformImports(host: PlatformHost) {
     window_present(id: number) {
       const canvas = [...contexts.values()].find((c) => c.window === id)?.canvas;
       if (!canvas) return;
-      // Pace to the page: wait while too many frames are on their way.
-      while (framesSent - Atomics.load(input, INPUT.FRAMES_SHOWN) >= MAX_FRAMES_IN_FLIGHT) {
-        if (Atomics.wait(input, INPUT.FRAMES_SHOWN, Atomics.load(input, INPUT.FRAMES_SHOWN), 100) === 'timed-out') break;
-      }
-      if (host.stats) {
-        const now = performance.now();
-        if (now - statsSince >= 10_000) {
-          console.log(`[stats] ${((framesSent - statsFrames) * 1000 / (now - statsSince)).toFixed(1)} fps`);
-          statsSince = now;
-          statsFrames = framesSent;
-        }
-      }
-      const bitmap = canvas.transferToImageBitmap();
-      framesSent++;
-      host.post({ type: 'frame', id, bitmap }, [bitmap]);
+      sendFrame(id, canvas);
       fit(canvas);
     },
     cursor_set(kind: number) {
@@ -171,5 +179,10 @@ export function platformImports(host: PlatformHost) {
       await nextTask();
     }),
   };
-  return { rjava_web: host.noJspi ? web : suspending, rjava_gl: gl.imports(host.debugGl) };
+  return {
+    rjava_web: host.noJspi ? web : suspending,
+    rjava_gl: gl.imports(host.debugGl),
+    // WebGPU for programs built on wgpu (Horizon); needs JSPI.
+    rc_gpu: gpuImports({ memory, present: sendFrame, readback: host.gpuReadback }),
+  };
 }
