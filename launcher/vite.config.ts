@@ -57,7 +57,8 @@ const rjavaWasmAsset = (): Plugin => ({
 });
 
 // Development only: read-only host files for the JVM's HTTP mounts (see
-// src/jvm/fs.ts) under /dev-fs/<absolute path>: `?stat`, `?list` or the bytes.
+// src/jvm/fs.ts) under /dev-fs/<absolute path>: `?stat`, `?list`, `?entries`
+// (names with stats) or the bytes.
 // Limited to the repository (the VM build, the JDK image and test files under
 // .scratch) and the local Prism Launcher libraries and assets.
 const DEV_FS_ROOTS = [
@@ -101,6 +102,19 @@ const devFs = (): Plugin => ({
       } else if (url.searchParams.has('stat')) {
         res.setHeader('Content-Type', 'application/json');
         res.end(JSON.stringify({ kind: stat?.isFile() ? 'file' : 'dir', size: stat?.size ?? 0, mtime: stat?.mtimeMs ?? 0 }));
+      } else if (url.searchParams.has('entries')) {
+        // A directory's names with their stats, in one request.
+        const names = stat?.isDirectory()
+          ? await fs.readdir(path)
+          : [...new Set(DEV_FS_ROOTS.filter((root) => root.startsWith(`${path}/`)).map((root) => root.slice(path.length + 1).split('/')[0]))];
+        const entries = await Promise.all(
+          names.map(async (name) => {
+            const child = await fs.stat(`${path}/${name}`).catch(() => null);
+            return { name, kind: child?.isFile() ? 'file' : 'dir', size: child?.size ?? 0, mtime: child?.mtimeMs ?? 0 };
+          }),
+        );
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify(entries));
       } else if (url.searchParams.has('list')) {
         const names = stat?.isDirectory()
           ? await fs.readdir(path)

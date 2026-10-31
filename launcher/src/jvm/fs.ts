@@ -52,25 +52,67 @@ const ROFS = 69;
 export const parent = (path: string) => path.slice(0, Math.max(path.lastIndexOf('/'), 0)) || '/';
 export const basename = (path: string) => path.slice(path.lastIndexOf('/') + 1);
 
-/** Read-only files over HTTP: `<url><path>?stat`, `?list` and the bytes. */
+/** Requests to a file server in flight at once: a program reading thousands
+ *  of small files would otherwise start them all, and the browser fails some. */
+const HTTP_PARALLEL = 16;
+/** Files at least this big stay in memory once read (archives read piecemeal). */
+const HTTP_KEEP_BYTES = 1 << 20;
+
+/** Read-only files over HTTP: `<url><path>?stat`, `?entries` (or `?list`) and the bytes. */
 export class HttpBackend implements Backend {
   readonly readonly = true;
   private stats = new Map<string, Promise<Stat | null>>();
   private contents = new Map<string, Promise<Uint8Array>>();
+  private active = 0;
+  private queue: (() => void)[] = [];
+  private entries = true;
 
   constructor(private url: string) {}
+
+  /** fetch, at most HTTP_PARALLEL at once, tried again when the request fails. */
+  private async fetch(url: string): Promise<Response> {
+    if (this.active >= HTTP_PARALLEL) await new Promise<void>((resolve) => this.queue.push(resolve));
+    this.active++;
+    try {
+      for (let attempt = 0; ; attempt++) {
+        try {
+          return await fetch(url);
+        } catch (e) {
+          if (attempt >= 4) throw e;
+          await new Promise((resolve) => setTimeout(resolve, 100 * 4 ** attempt));
+        }
+      }
+    } finally {
+      this.active--;
+      this.queue.shift()?.();
+    }
+  }
 
   stat(path: string): Promise<Stat | null> {
     let stat = this.stats.get(path);
     if (!stat) {
-      stat = fetch(`${this.url}${encodePath(path)}?stat`).then((r) => (r.ok ? (r.json() as Promise<Stat>) : null));
+      stat = this.fetch(`${this.url}${encodePath(path)}?stat`).then((r) => (r.ok ? (r.json() as Promise<Stat>) : null));
+      // A failed request is asked again next time.
+      stat.catch(() => this.stats.delete(path));
       this.stats.set(path, stat);
     }
     return stat;
   }
 
   async list(path: string): Promise<string[]> {
-    const response = await fetch(`${this.url}${encodePath(path)}?list`);
+    if (this.entries) {
+      const response = await this.fetch(`${this.url}${encodePath(path)}?entries`);
+      if (response.ok) {
+        const entries = (await response.json()) as (Stat & { name: string })[];
+        const prefix = path === '/' ? '/' : `${path}/`;
+        for (const { name, ...stat } of entries) this.stats.set(`${prefix}${name}`, Promise.resolve(stat));
+        return entries.map((e) => e.name);
+      }
+      // A server without `?entries` answers 400: names alone.
+      if (response.status !== 404) this.entries = false;
+      else throw new FsError(NOENT);
+    }
+    const response = await this.fetch(`${this.url}${encodePath(path)}?list`);
     if (!response.ok) throw new FsError(NOENT);
     return (await response.json()) as string[];
   }
@@ -82,11 +124,16 @@ export class HttpBackend implements Backend {
     if (stat.kind === 'dir') throw new FsError(ISDIR);
     let content = this.contents.get(path);
     if (!content) {
-      content = fetch(`${this.url}${encodePath(path)}`).then(async (r) => {
+      content = this.fetch(`${this.url}${encodePath(path)}`).then(async (r) => {
         if (!r.ok) throw new FsError(NOENT);
         return new Uint8Array(await r.arrayBuffer());
       });
       this.contents.set(path, content);
+      // Small files are fetched again when opened again; failures too.
+      void content.then(
+        (data) => data.length < HTTP_KEEP_BYTES && this.contents.delete(path),
+        () => this.contents.delete(path),
+      );
     }
     const data = await content;
     return {
