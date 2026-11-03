@@ -1,5 +1,5 @@
 diff --git a/Cargo.lock b/Cargo.lock
-index 9413fb1..1e46e48 100644
+index 9413fb1a6..1e46e48fe 100644
 --- a/Cargo.lock
 +++ b/Cargo.lock
 @@ -488,8 +488,6 @@ dependencies = [
@@ -47,7 +47,7 @@ index 9413fb1..1e46e48 100644
   "ahash",
   "android-activity",
 diff --git a/Cargo.toml b/Cargo.toml
-index 788c0e5..3e60d41 100644
+index 788c0e564..3e60d41af 100644
 --- a/Cargo.toml
 +++ b/Cargo.toml
 @@ -1,9 +1,10 @@
@@ -75,7 +75,7 @@ index 788c0e5..3e60d41 100644
  # Line tables keep file:line in backtraces; full debug info made every
  # example and test binary hundreds of megabytes and slow to link.
 diff --git a/crates/horizon-client-input/Cargo.toml b/crates/horizon-client-input/Cargo.toml
-index e1d7cf7..89aa836 100644
+index e1d7cf72b..89aa836ea 100644
 --- a/crates/horizon-client-input/Cargo.toml
 +++ b/crates/horizon-client-input/Cargo.toml
 @@ -12,7 +12,6 @@ winit = "0.30.13"
@@ -95,7 +95,7 @@ index e1d7cf7..89aa836 100644
 +[target.'cfg(not(target_family = "wasm"))'.dependencies]
 +arboard = { version = "3.6.1", default-features = false, features = ["wayland-data-control"] }
 diff --git a/crates/horizon-client-input/src/clipboard.rs b/crates/horizon-client-input/src/clipboard.rs
-index eaf2a22..e8f7413 100644
+index eaf2a2274..e8f74138b 100644
 --- a/crates/horizon-client-input/src/clipboard.rs
 +++ b/crates/horizon-client-input/src/clipboard.rs
 @@ -119,6 +119,27 @@ pub trait Clipboard {
@@ -127,7 +127,7 @@ index eaf2a22..e8f7413 100644
  /// data-control protocol and falls back to X11 (XWayland) on compositors
  /// without it. When no system clipboard can be reached, text copied in the
 diff --git a/crates/horizon-client-render/Cargo.toml b/crates/horizon-client-render/Cargo.toml
-index 7594389..d368f69 100644
+index 75943891b..d368f69cd 100644
 --- a/crates/horizon-client-render/Cargo.toml
 +++ b/crates/horizon-client-render/Cargo.toml
 @@ -7,6 +7,8 @@ rust-version = "1.90"
@@ -140,7 +140,7 @@ index 7594389..d368f69 100644
  horizon-bench = { path = "../horizon-bench" }
  horizon-client-core = { path = "../horizon-client-core" }
 diff --git a/crates/horizon-client-render/src/auth.rs b/crates/horizon-client-render/src/auth.rs
-index 2e9066f..a530ad0 100644
+index 2e9066f87..a530ad078 100644
 --- a/crates/horizon-client-render/src/auth.rs
 +++ b/crates/horizon-client-render/src/auth.rs
 @@ -406,7 +406,10 @@ mod tests {
@@ -156,7 +156,7 @@ index 2e9066f..a530ad0 100644
          let text = r#"{"name":"Notch","uuid":"069a79f4-44e9-4726-a5be-fca90e38aaf5","access_token":"mock-token","user_type":"msa"}"#;
          let path = write(&dir, text, 0o600);
 diff --git a/crates/horizon-client-render/src/crash.rs b/crates/horizon-client-render/src/crash.rs
-index f0aaac3..5c38554 100644
+index f0aaac3ee..5c38554f2 100644
 --- a/crates/horizon-client-render/src/crash.rs
 +++ b/crates/horizon-client-render/src/crash.rs
 @@ -788,7 +788,10 @@ mod tests {
@@ -172,7 +172,7 @@ index f0aaac3..5c38554 100644
          assert_eq!(std::fs::read_to_string(&path).unwrap(), text);
          assert!(
 diff --git a/crates/horizon-client-render/src/datapack.rs b/crates/horizon-client-render/src/datapack.rs
-index 679ebe2..b75093a 100644
+index 679ebe2f2..b75093a0a 100644
 --- a/crates/horizon-client-render/src/datapack.rs
 +++ b/crates/horizon-client-render/src/datapack.rs
 @@ -181,7 +181,8 @@ pub fn temp_folder() -> std::io::Result<PathBuf> {
@@ -232,7 +232,7 @@ index 679ebe2..b75093a 100644
          let (dir, world) = (root.join("mcworld"), root.join("world"));
          let write = |pack: &str, p: &str, t: &str| {
 diff --git a/crates/horizon-client-render/src/font.rs b/crates/horizon-client-render/src/font.rs
-index bc0fa4c..f4ba7f2 100644
+index bc0fa4cc6..f4ba7f291 100644
 --- a/crates/horizon-client-render/src/font.rs
 +++ b/crates/horizon-client-render/src/font.rs
 @@ -1214,7 +1214,10 @@ mod tests {
@@ -248,7 +248,7 @@ index bc0fa4c..f4ba7f2 100644
          for (path, bytes) in files {
              let path = root.join(path);
 diff --git a/crates/horizon-client-render/src/gfx.rs b/crates/horizon-client-render/src/gfx.rs
-index d7236e3..6627608 100644
+index d7236e3f6..66276083b 100644
 --- a/crates/horizon-client-render/src/gfx.rs
 +++ b/crates/horizon-client-render/src/gfx.rs
 @@ -1125,11 +1125,18 @@ async fn open_backend(
@@ -271,7 +271,7 @@ index d7236e3..6627608 100644
          None
      } else {
 diff --git a/crates/horizon-client-render/src/gfx/panorama.rs b/crates/horizon-client-render/src/gfx/panorama.rs
-index 1c17e0b..1d9909e 100644
+index 1c17e0bff..1d9909e16 100644
 --- a/crates/horizon-client-render/src/gfx/panorama.rs
 +++ b/crates/horizon-client-render/src/gfx/panorama.rs
 @@ -257,9 +257,9 @@ mod tests {
@@ -287,7 +287,7 @@ index 1c17e0b..1d9909e 100644
              ));
              let fixture = Self(root);
 diff --git a/crates/horizon-client-render/src/hud.rs b/crates/horizon-client-render/src/hud.rs
-index a2a5fa7..6e86ce3 100644
+index a2a5fa70b..6e86ce318 100644
 --- a/crates/horizon-client-render/src/hud.rs
 +++ b/crates/horizon-client-render/src/hud.rs
 @@ -2130,7 +2130,10 @@ mod tests {
@@ -388,7 +388,7 @@ index a2a5fa7..6e86ce3 100644
              ("mob_effect/levitation", 18),
              ("gui/sprites/hud/effect_background", 24),
 diff --git a/crates/horizon-client-render/src/lod/cache.rs b/crates/horizon-client-render/src/lod/cache.rs
-index 7b5b688..61f7c1d 100644
+index 7b5b688f5..61f7c1d2c 100644
 --- a/crates/horizon-client-render/src/lod/cache.rs
 +++ b/crates/horizon-client-render/src/lod/cache.rs
 @@ -310,7 +310,10 @@ mod tests {
@@ -404,7 +404,7 @@ index 7b5b688..61f7c1d 100644
          let cache = DiskCache::new(dir.clone(), 7);
          assert!(cache.get(3, -40).is_none(), "nothing cached yet");
 diff --git a/crates/horizon-client-render/src/logging.rs b/crates/horizon-client-render/src/logging.rs
-index d53a0c5..a83bd58 100644
+index d53a0c5eb..a83bd5801 100644
 --- a/crates/horizon-client-render/src/logging.rs
 +++ b/crates/horizon-client-render/src/logging.rs
 @@ -48,7 +48,7 @@ pub fn data_dir() -> PathBuf {
@@ -450,7 +450,7 @@ index d53a0c5..a83bd58 100644
          assert!(newest_crash_report(&home).is_none());
          let dir = crash_reports_dir(&home);
 diff --git a/crates/horizon-client-render/src/model_library.rs b/crates/horizon-client-render/src/model_library.rs
-index 065f6c8..563695b 100644
+index 065f6c847..563695b0f 100644
 --- a/crates/horizon-client-render/src/model_library.rs
 +++ b/crates/horizon-client-render/src/model_library.rs
 @@ -143,9 +143,10 @@ mod tests {
@@ -468,7 +468,7 @@ index 065f6c8..563695b 100644
          fixture.write("horizon:nested/child", r#"{"parent":"horizon:parent","textures":{"all":"block/glass"},"display":{"gui":{"rotation":[30,45,0]}}}"#);
          fixture.write("horizon:broken", "{");
 diff --git a/crates/horizon-client-render/src/packs.rs b/crates/horizon-client-render/src/packs.rs
-index f3ef847..f6c7ea1 100644
+index f3ef8476b..f6c7ea18e 100644
 --- a/crates/horizon-client-render/src/packs.rs
 +++ b/crates/horizon-client-render/src/packs.rs
 @@ -1105,7 +1105,8 @@ mod tests {
@@ -528,7 +528,7 @@ index f3ef847..f6c7ea1 100644
          let vanilla = base.join("vanilla");
          fs::create_dir_all(vanilla.join("assets/minecraft/textures/block")).unwrap();
 diff --git a/crates/horizon-client-render/src/packs/cache.rs b/crates/horizon-client-render/src/packs/cache.rs
-index 60b531c..d3068d2 100644
+index 60b531c74..d3068d2d2 100644
 --- a/crates/horizon-client-render/src/packs/cache.rs
 +++ b/crates/horizon-client-render/src/packs/cache.rs
 @@ -352,9 +352,9 @@ mod tests {
@@ -544,7 +544,7 @@ index 60b531c..d3068d2 100644
              ));
              let _ = fs::remove_dir_all(&path);
 diff --git a/crates/horizon-client-render/src/post_chain.rs b/crates/horizon-client-render/src/post_chain.rs
-index a6c1535..bea21af 100644
+index a6c1535b3..bea21afb1 100644
 --- a/crates/horizon-client-render/src/post_chain.rs
 +++ b/crates/horizon-client-render/src/post_chain.rs
 @@ -1650,8 +1650,10 @@ mod tests {
@@ -561,7 +561,7 @@ index a6c1535..bea21af 100644
          std::fs::create_dir_all(&dir).unwrap();
          std::fs::write(dir.join(format!("{name}.json")), json).unwrap();
 diff --git a/crates/horizon-client-render/src/shader_pack_list.rs b/crates/horizon-client-render/src/shader_pack_list.rs
-index c9a8f33..878e929 100644
+index c9a8f338b..878e9299f 100644
 --- a/crates/horizon-client-render/src/shader_pack_list.rs
 +++ b/crates/horizon-client-render/src/shader_pack_list.rs
 @@ -77,7 +77,10 @@ mod tests {
@@ -577,7 +577,7 @@ index c9a8f33..878e929 100644
          std::fs::create_dir_all(&dir).unwrap();
          let d = dir.as_path();
 diff --git a/crates/horizon-client-render/src/skins.rs b/crates/horizon-client-render/src/skins.rs
-index dc37b7e..4f0c4aa 100644
+index dc37b7e3f..4f0c4aac2 100644
 --- a/crates/horizon-client-render/src/skins.rs
 +++ b/crates/horizon-client-render/src/skins.rs
 @@ -995,7 +995,10 @@ mod tests {
@@ -612,7 +612,7 @@ index dc37b7e..4f0c4aa 100644
          assert!(d.again("skins/abc"));
          assert!(!d.again("skins/missing"));
 diff --git a/crates/horizon-client-render/src/sound_events.rs b/crates/horizon-client-render/src/sound_events.rs
-index ef35bbb..a8b5de9 100644
+index ef35bbb15..a8b5de95c 100644
 --- a/crates/horizon-client-render/src/sound_events.rs
 +++ b/crates/horizon-client-render/src/sound_events.rs
 @@ -409,7 +409,8 @@ mod tests {
@@ -626,7 +626,7 @@ index ef35bbb..a8b5de9 100644
          fs::create_dir_all(ns.join("sounds/block/note")).unwrap();
          fs::write(ns.join("sounds/block/note/harp.ogg"), b"").unwrap();
 diff --git a/crates/horizon-client-render/src/split_profiles/store.rs b/crates/horizon-client-render/src/split_profiles/store.rs
-index 0c90007..65a3244 100644
+index 0c90007f9..65a324445 100644
 --- a/crates/horizon-client-render/src/split_profiles/store.rs
 +++ b/crates/horizon-client-render/src/split_profiles/store.rs
 @@ -71,7 +71,10 @@ mod tests {
@@ -642,7 +642,7 @@ index 0c90007..65a3244 100644
          restore(&a, "jordank").unwrap();
          let options = a.join("jordank/options.txt");
 diff --git a/crates/horizon-client-render/src/sprite_cache.rs b/crates/horizon-client-render/src/sprite_cache.rs
-index c440e6c..774f576 100644
+index c440e6ccf..774f5768e 100644
 --- a/crates/horizon-client-render/src/sprite_cache.rs
 +++ b/crates/horizon-client-render/src/sprite_cache.rs
 @@ -98,7 +98,7 @@ impl SpriteCache {
@@ -668,7 +668,7 @@ index c440e6c..774f576 100644
          fs::create_dir_all(dir.join("assets/minecraft/textures/block")).unwrap();
          dir
 diff --git a/crates/horizon-client-render/src/sprites.rs b/crates/horizon-client-render/src/sprites.rs
-index d4b2dd5..0d8a5f3 100644
+index d4b2dd526..0d8a5f31a 100644
 --- a/crates/horizon-client-render/src/sprites.rs
 +++ b/crates/horizon-client-render/src/sprites.rs
 @@ -460,8 +460,10 @@ mod tests {
@@ -697,7 +697,7 @@ index d4b2dd5..0d8a5f3 100644
                  .duration_since(std::time::UNIX_EPOCH)
                  .unwrap()
 diff --git a/crates/horizon-client-render/src/telemetry.rs b/crates/horizon-client-render/src/telemetry.rs
-index afd2dbc..4669aad 100644
+index afd2dbc94..4669aadfa 100644
 --- a/crates/horizon-client-render/src/telemetry.rs
 +++ b/crates/horizon-client-render/src/telemetry.rs
 @@ -326,7 +326,12 @@ fn peak_ram_mb() -> u32 {
@@ -727,7 +727,7 @@ index afd2dbc..4669aad 100644
          let _ = std::fs::remove_dir_all(&dir);
          std::fs::create_dir_all(&dir).unwrap();
 diff --git a/crates/horizon-client/src/benchmark.rs b/crates/horizon-client/src/benchmark.rs
-index bd2e97b..87f4b92 100644
+index bd2e97be0..87f4b9297 100644
 --- a/crates/horizon-client/src/benchmark.rs
 +++ b/crates/horizon-client/src/benchmark.rs
 @@ -120,7 +120,7 @@ fn run(control: &Control, setup: Setup) -> Result<PathBuf, String> {
@@ -753,7 +753,7 @@ index bd2e97b..87f4b92 100644
          std::fs::create_dir_all(&world).unwrap();
          assert!(
 diff --git a/crates/horizon-client/src/bin/horizon-ctl/launch.rs b/crates/horizon-client/src/bin/horizon-ctl/launch.rs
-index ee0b2b8..313b042 100644
+index ee0b2b8b3..313b04224 100644
 --- a/crates/horizon-client/src/bin/horizon-ctl/launch.rs
 +++ b/crates/horizon-client/src/bin/horizon-ctl/launch.rs
 @@ -257,7 +257,10 @@ mod tests {
@@ -769,7 +769,7 @@ index ee0b2b8..313b042 100644
          std::fs::create_dir_all(&dir).unwrap();
          dir
 diff --git a/crates/horizon-client/src/bin/horizon-ctl/main.rs b/crates/horizon-client/src/bin/horizon-ctl/main.rs
-index 33ea1f8..3d48e9f 100644
+index 33ea1f870..3d48e9f95 100644
 --- a/crates/horizon-client/src/bin/horizon-ctl/main.rs
 +++ b/crates/horizon-client/src/bin/horizon-ctl/main.rs
 @@ -544,7 +544,10 @@ mod tests {
@@ -816,7 +816,7 @@ index 33ea1f8..3d48e9f 100644
          assert_eq!(
              s.run(&["state".to_owned()]).unwrap_err().status,
 diff --git a/crates/horizon-client/src/bin/horizon-ctl/mcp.rs b/crates/horizon-client/src/bin/horizon-ctl/mcp.rs
-index ae30b74..8831463 100644
+index ae30b7498..883146353 100644
 --- a/crates/horizon-client/src/bin/horizon-ctl/mcp.rs
 +++ b/crates/horizon-client/src/bin/horizon-ctl/mcp.rs
 @@ -74,7 +74,8 @@ impl Session {
@@ -842,7 +842,7 @@ index ae30b74..8831463 100644
              .handle("initialize", &json!({ "protocolVersion": "2025-03-26" }))
              .unwrap();
 diff --git a/crates/horizon-client/src/command_storage.rs b/crates/horizon-client/src/command_storage.rs
-index 560423e..9db80f2 100644
+index 560423e90..9db80f249 100644
 --- a/crates/horizon-client/src/command_storage.rs
 +++ b/crates/horizon-client/src/command_storage.rs
 @@ -106,7 +106,8 @@ mod tests {
@@ -856,7 +856,7 @@ index 560423e..9db80f2 100644
          let mut s = CommandStorage::default();
          assert_eq!(s.get("minecraft:x"), Tag::Compound(Compound::new()));
 diff --git a/crates/horizon-client/src/content_identity.rs b/crates/horizon-client/src/content_identity.rs
-index 5e13cf6..0918a4a 100644
+index 5e13cf6ca..0918a4a81 100644
 --- a/crates/horizon-client/src/content_identity.rs
 +++ b/crates/horizon-client/src/content_identity.rs
 @@ -157,9 +157,9 @@ mod tests {
@@ -872,7 +872,7 @@ index 5e13cf6..0918a4a 100644
          std::fs::create_dir_all(&root).unwrap();
          let facts = br#"{"states":[["minecraft:stone",false,false,"Block{minecraft:stone}",{"id":"minecraft:stone"}]]}"#;
 diff --git a/crates/horizon-client/src/control.rs b/crates/horizon-client/src/control.rs
-index 931bcbd..b39ecb2 100644
+index 931bcbdf5..b39ecb2cf 100644
 --- a/crates/horizon-client/src/control.rs
 +++ b/crates/horizon-client/src/control.rs
 @@ -125,7 +125,7 @@ fn random_token() -> String {
@@ -920,7 +920,7 @@ index 931bcbd..b39ecb2 100644
          let (port, _) = read_endpoint(&path).unwrap();
          let mut stream = TcpStream::connect((Ipv4Addr::LOCALHOST, port)).unwrap();
 diff --git a/crates/horizon-client/src/crafting.rs b/crates/horizon-client/src/crafting.rs
-index 4f44e5f..0af3cf4 100644
+index 4f44e5fde..0af3cf4f8 100644
 --- a/crates/horizon-client/src/crafting.rs
 +++ b/crates/horizon-client/src/crafting.rs
 @@ -1821,8 +1821,10 @@ mod tests {
@@ -949,7 +949,7 @@ index 4f44e5f..0af3cf4 100644
          fs::create_dir_all(root.join("data/minecraft/recipe")).unwrap();
          fs::write(
 diff --git a/crates/horizon-client/src/debug_entries.rs b/crates/horizon-client/src/debug_entries.rs
-index 8a2b6bd..93f2c9b 100644
+index 8a2b6bd1d..93f2c9b60 100644
 --- a/crates/horizon-client/src/debug_entries.rs
 +++ b/crates/horizon-client/src/debug_entries.rs
 @@ -388,8 +388,10 @@ mod tests {
@@ -966,7 +966,7 @@ index 8a2b6bd..93f2c9b 100644
          let mut e = DebugEntries::load(&dir);
          assert!(e.is_using_profile(Profile::Default));
 diff --git a/crates/horizon-client/src/discord_presence.rs b/crates/horizon-client/src/discord_presence.rs
-index 5f8cc58..02dc78f 100644
+index 5f8cc5837..02dc78f3b 100644
 --- a/crates/horizon-client/src/discord_presence.rs
 +++ b/crates/horizon-client/src/discord_presence.rs
 @@ -268,7 +268,7 @@ fn activity(status: Status, since: Option<u64>) -> Option<Value> {
@@ -1020,7 +1020,7 @@ index 5f8cc58..02dc78f 100644
          assert_eq!(got[1]["args"]["activity"], Value::Null);
          assert_ne!(got[0]["nonce"], got[1]["nonce"]);
 diff --git a/crates/horizon-client/src/game.rs b/crates/horizon-client/src/game.rs
-index f49a943..b09c5fb 100644
+index f49a94359..b09c5fbce 100644
 --- a/crates/horizon-client/src/game.rs
 +++ b/crates/horizon-client/src/game.rs
 @@ -499,15 +499,21 @@ impl Options {
@@ -1090,7 +1090,7 @@ index f49a943..b09c5fb 100644
          let _ = std::fs::remove_dir_all(&dir);
  
 diff --git a/crates/horizon-client/src/game/chat.rs b/crates/horizon-client/src/game/chat.rs
-index 1a20781..9506e49 100644
+index 1a2078161..9506e49d1 100644
 --- a/crates/horizon-client/src/game/chat.rs
 +++ b/crates/horizon-client/src/game/chat.rs
 @@ -1501,7 +1501,8 @@ mod tests {
@@ -1114,7 +1114,7 @@ index 1a20781..9506e49 100644
          std::fs::write(dir.join("command-registries.json"), r#"{"effects":["a"]}"#).unwrap();
          let first = command_export(&dir).unwrap();
 diff --git a/crates/horizon-client/src/game/dedicated.rs b/crates/horizon-client/src/game/dedicated.rs
-index da6ee1d..c13d474 100644
+index da6ee1d19..c13d47436 100644
 --- a/crates/horizon-client/src/game/dedicated.rs
 +++ b/crates/horizon-client/src/game/dedicated.rs
 @@ -300,7 +300,7 @@ pub(super) fn preflight(options: &mut Options) -> Result<bool> {
@@ -1139,7 +1139,7 @@ index da6ee1d..c13d474 100644
              fs::create_dir(&home).unwrap();
              let mut child = Command::new(std::env::current_exe().unwrap())
 diff --git a/crates/horizon-client/src/game/dedicated/report.rs b/crates/horizon-client/src/game/dedicated/report.rs
-index ae68d50..5de1594 100644
+index ae68d5023..5de159479 100644
 --- a/crates/horizon-client/src/game/dedicated/report.rs
 +++ b/crates/horizon-client/src/game/dedicated/report.rs
 @@ -41,7 +41,7 @@ impl Recording {
@@ -1170,7 +1170,7 @@ index ae68d50..5de1594 100644
              "cpu_cores_used": cpu,
              "config": {
 diff --git a/crates/horizon-client/src/game/entity_model_loading_tests.rs b/crates/horizon-client/src/game/entity_model_loading_tests.rs
-index 195ba09..56badbf 100644
+index 195ba0961..56badbfe1 100644
 --- a/crates/horizon-client/src/game/entity_model_loading_tests.rs
 +++ b/crates/horizon-client/src/game/entity_model_loading_tests.rs
 @@ -61,9 +61,9 @@ impl FixtureRoot {
@@ -1186,7 +1186,7 @@ index 195ba09..56badbf 100644
          fs::create_dir(&root).unwrap();
          Self(root)
 diff --git a/crates/horizon-client/src/game/mods.rs b/crates/horizon-client/src/game/mods.rs
-index 9aab08b..1216d8b 100644
+index 9aab08b9f..1216d8b47 100644
 --- a/crates/horizon-client/src/game/mods.rs
 +++ b/crates/horizon-client/src/game/mods.rs
 @@ -263,7 +263,10 @@ mod tests {
@@ -1202,7 +1202,7 @@ index 9aab08b..1216d8b 100644
          std::fs::create_dir_all(&dir).unwrap();
          for id in ["veinminer", "zoom", "minimap"] {
 diff --git a/crates/horizon-client/src/game/native_hooks.rs b/crates/horizon-client/src/game/native_hooks.rs
-index ae62cb6..01f2e35 100644
+index ae62cb6a7..01f2e35c0 100644
 --- a/crates/horizon-client/src/game/native_hooks.rs
 +++ b/crates/horizon-client/src/game/native_hooks.rs
 @@ -2848,7 +2848,10 @@ mod tests {
@@ -1218,7 +1218,7 @@ index ae62cb6..01f2e35 100644
          let options = root.join("options.txt");
          assert!(!root.join("config").exists());
 diff --git a/crates/horizon-client/src/game/remote.rs b/crates/horizon-client/src/game/remote.rs
-index adb0a68..f3f42e9 100644
+index adb0a6865..f3f42e928 100644
 --- a/crates/horizon-client/src/game/remote.rs
 +++ b/crates/horizon-client/src/game/remote.rs
 @@ -722,7 +722,7 @@ impl Game<'_> {
@@ -1231,7 +1231,7 @@ index adb0a68..f3f42e9 100644
          ));
          self.inventory = vec![None; 36];
 diff --git a/crates/horizon-client/src/game/remote_mob_data.rs b/crates/horizon-client/src/game/remote_mob_data.rs
-index 984f392..ac622ff 100644
+index 984f39255..ac622ff8c 100644
 --- a/crates/horizon-client/src/game/remote_mob_data.rs
 +++ b/crates/horizon-client/src/game/remote_mob_data.rs
 @@ -643,8 +643,10 @@ mod tests {
@@ -1248,7 +1248,7 @@ index 984f392..ac622ff 100644
          fs::write(root.join("entity-types.json"), r#"{"minecraft:bat": {}}"#).unwrap();
          fs::write(
 diff --git a/crates/horizon-client/src/game/startup_menu.rs b/crates/horizon-client/src/game/startup_menu.rs
-index bd4de4d..50f35e0 100644
+index bd4de4de4..50f35e02c 100644
 --- a/crates/horizon-client/src/game/startup_menu.rs
 +++ b/crates/horizon-client/src/game/startup_menu.rs
 @@ -835,7 +835,7 @@ mod tests {
@@ -1261,7 +1261,7 @@ index bd4de4d..50f35e0 100644
          let (release, wait) = std::sync::mpsc::channel();
          let (published, published_rx) = std::sync::mpsc::channel();
 diff --git a/crates/horizon-client/src/item_render.rs b/crates/horizon-client/src/item_render.rs
-index bca9197..39c1762 100644
+index bca9197eb..39c1762b2 100644
 --- a/crates/horizon-client/src/item_render.rs
 +++ b/crates/horizon-client/src/item_render.rs
 @@ -945,8 +945,10 @@ mod tests {
@@ -1299,7 +1299,7 @@ index bca9197..39c1762 100644
          let path = dir.join("indexed.png");
          std::fs::write(&path, png).unwrap();
 diff --git a/crates/horizon-client/src/item_render/special.rs b/crates/horizon-client/src/item_render/special.rs
-index 802ab97..415144d 100644
+index 802ab97d3..415144d3b 100644
 --- a/crates/horizon-client/src/item_render/special.rs
 +++ b/crates/horizon-client/src/item_render/special.rs
 @@ -737,8 +737,10 @@ mod tests {
@@ -1316,7 +1316,7 @@ index 802ab97..415144d 100644
          std::fs::write(root.join("items.json"), "{}").unwrap();
          std::fs::write(
 diff --git a/crates/horizon-client/src/item_tooltip.rs b/crates/horizon-client/src/item_tooltip.rs
-index c8c3030..a5202c5 100644
+index c8c303012..a5202c5ff 100644
 --- a/crates/horizon-client/src/item_tooltip.rs
 +++ b/crates/horizon-client/src/item_tooltip.rs
 @@ -1351,9 +1351,9 @@ mod tests {
@@ -1344,7 +1344,7 @@ index c8c3030..a5202c5 100644
                  .duration_since(std::time::UNIX_EPOCH)
                  .unwrap()
 diff --git a/crates/horizon-client/src/lan/advancements.rs b/crates/horizon-client/src/lan/advancements.rs
-index 2edb067..6c3284e 100644
+index 2edb0677c..6c3284ecd 100644
 --- a/crates/horizon-client/src/lan/advancements.rs
 +++ b/crates/horizon-client/src/lan/advancements.rs
 @@ -620,8 +620,10 @@ mod tests {
@@ -1361,7 +1361,7 @@ index 2edb067..6c3284e 100644
          let dir = root.join("data/minecraft/recipe");
          std::fs::create_dir_all(&dir).unwrap();
 diff --git a/crates/horizon-client/src/lan/code_of_conduct.rs b/crates/horizon-client/src/lan/code_of_conduct.rs
-index 7dceb19..e2b4011 100644
+index 7dceb1931..e2b4011b2 100644
 --- a/crates/horizon-client/src/lan/code_of_conduct.rs
 +++ b/crates/horizon-client/src/lan/code_of_conduct.rs
 @@ -135,7 +135,7 @@ mod tests {
@@ -1384,7 +1384,7 @@ index 7dceb19..e2b4011 100644
          std::fs::write(dir.join("EN_US.txt"), "\u{a7}lBe nice\nplease\n").unwrap();
          std::fs::write(dir.join("notes.md"), "ignored").unwrap();
 diff --git a/crates/horizon-client/src/lan/far.rs b/crates/horizon-client/src/lan/far.rs
-index 958d0bb..bb42a60 100644
+index 958d0bb36..bb42a6031 100644
 --- a/crates/horizon-client/src/lan/far.rs
 +++ b/crates/horizon-client/src/lan/far.rs
 @@ -361,7 +361,7 @@ mod tests {
@@ -1397,7 +1397,7 @@ index 958d0bb..bb42a60 100644
          ));
          let encoder = ChunkEncoder::new(
 diff --git a/crates/horizon-client/src/mod_content.rs b/crates/horizon-client/src/mod_content.rs
-index 6905404..d0d0396 100644
+index 6905404e9..d0d0396ea 100644
 --- a/crates/horizon-client/src/mod_content.rs
 +++ b/crates/horizon-client/src/mod_content.rs
 @@ -1813,7 +1813,14 @@ fn stamp(base: &Path, mods: &[ContentMod]) -> Result<String> {
@@ -1417,7 +1417,7 @@ index 6905404..d0d0396 100644
      parts.push(
          String::from_utf8_lossy(&fs::read(base.join("horizon-resources.json"))?).into_owned(),
 diff --git a/crates/horizon-client/src/mod_content_tests.rs b/crates/horizon-client/src/mod_content_tests.rs
-index ed43139..8950deb 100644
+index ed43139f7..8950debc7 100644
 --- a/crates/horizon-client/src/mod_content_tests.rs
 +++ b/crates/horizon-client/src/mod_content_tests.rs
 @@ -114,7 +114,10 @@ fn creative_tabs_keep_vanilla_items_missing_from_search() {
@@ -1661,7 +1661,7 @@ index ed43139..8950deb 100644
      let dir = scratch.join("gems");
      for (name, text) in [
 diff --git a/crates/horizon-client/src/multiplayer.rs b/crates/horizon-client/src/multiplayer.rs
-index 2bd38ba..4e27c76 100644
+index 2bd38ba39..4e27c7678 100644
 --- a/crates/horizon-client/src/multiplayer.rs
 +++ b/crates/horizon-client/src/multiplayer.rs
 @@ -1876,7 +1876,10 @@ mod tests {
@@ -1713,7 +1713,7 @@ index 2bd38ba..4e27c76 100644
          std::fs::create_dir_all(&saves).unwrap();
          let file = servers_file(&saves);
 diff --git a/crates/horizon-client/src/net.rs b/crates/horizon-client/src/net.rs
-index a524cb0..a0a3317 100644
+index a524cb07a..a0a33175d 100644
 --- a/crates/horizon-client/src/net.rs
 +++ b/crates/horizon-client/src/net.rs
 @@ -1143,8 +1143,10 @@ mod tests {
@@ -1744,7 +1744,7 @@ index a524cb0..a0a3317 100644
      }
  
 diff --git a/crates/horizon-client/src/offline_name.rs b/crates/horizon-client/src/offline_name.rs
-index 552f155..7e9ddd6 100644
+index 552f15570..7e9ddd680 100644
 --- a/crates/horizon-client/src/offline_name.rs
 +++ b/crates/horizon-client/src/offline_name.rs
 @@ -52,7 +52,7 @@ fn seed() -> u64 {
@@ -1769,7 +1769,7 @@ index 552f155..7e9ddd6 100644
          let _ = fs::remove_dir_all(&d);
          fs::create_dir_all(&d).unwrap();
 diff --git a/crates/horizon-client/src/recipe_book.rs b/crates/horizon-client/src/recipe_book.rs
-index 9dceee8..f071ea3 100644
+index 9dceee8ac..f071ea3c6 100644
 --- a/crates/horizon-client/src/recipe_book.rs
 +++ b/crates/horizon-client/src/recipe_book.rs
 @@ -944,7 +944,10 @@ mod tests {
@@ -1798,7 +1798,7 @@ index 9dceee8..f071ea3 100644
          std::fs::create_dir_all(&dir).unwrap();
          for name in ["stick", "crafting_table", "torch"] {
 diff --git a/crates/horizon-client/src/save.rs b/crates/horizon-client/src/save.rs
-index 1d00123..c78f3ef 100644
+index 1d00123e1..c78f3ef28 100644
 --- a/crates/horizon-client/src/save.rs
 +++ b/crates/horizon-client/src/save.rs
 @@ -148,8 +148,16 @@ impl SessionLock {
@@ -2036,7 +2036,7 @@ index 1d00123..c78f3ef 100644
          let dimensions = [
              "minecraft:overworld",
 diff --git a/crates/horizon-client/src/server_packs/download.rs b/crates/horizon-client/src/server_packs/download.rs
-index 0ae237c..9662d48 100644
+index 0ae237c02..9662d48d1 100644
 --- a/crates/horizon-client/src/server_packs/download.rs
 +++ b/crates/horizon-client/src/server_packs/download.rs
 @@ -411,7 +411,7 @@ mod tests {
@@ -2049,7 +2049,7 @@ index 0ae237c..9662d48 100644
          dir
      }
 diff --git a/crates/horizon-client/src/structure_blocks.rs b/crates/horizon-client/src/structure_blocks.rs
-index 3c9832c..b3b4237 100644
+index 3c9832c6f..b3b423793 100644
 --- a/crates/horizon-client/src/structure_blocks.rs
 +++ b/crates/horizon-client/src/structure_blocks.rs
 @@ -372,7 +372,10 @@ mod tests {
@@ -2065,7 +2065,7 @@ index 3c9832c..b3b4237 100644
          std::fs::write(root.join("items.json"), "{}").unwrap();
          let mut slot = None;
 diff --git a/crates/horizon-client/src/title/tests.rs b/crates/horizon-client/src/title/tests.rs
-index 844b70c..fc6fed2 100644
+index 844b70c62..fc6fed284 100644
 --- a/crates/horizon-client/src/title/tests.rs
 +++ b/crates/horizon-client/src/title/tests.rs
 @@ -12,9 +12,9 @@ struct Fixture {
@@ -2081,7 +2081,7 @@ index 844b70c..fc6fed2 100644
          ));
          fs::create_dir_all(root.join("saves")).unwrap();
 diff --git a/crates/horizon-client/src/win_screen.rs b/crates/horizon-client/src/win_screen.rs
-index 9d100c7..f599689 100644
+index 9d100c744..f599689f7 100644
 --- a/crates/horizon-client/src/win_screen.rs
 +++ b/crates/horizon-client/src/win_screen.rs
 @@ -313,8 +313,10 @@ mod tests {
@@ -2098,7 +2098,7 @@ index 9d100c7..f599689 100644
          std::fs::create_dir_all(&texts).unwrap();
          std::fs::write(texts.join("end.txt"), end).unwrap();
 diff --git a/crates/horizon-friends/Cargo.toml b/crates/horizon-friends/Cargo.toml
-index d53b943..cdfd3f5 100644
+index d53b9435f..cdfd3f5c4 100644
 --- a/crates/horizon-friends/Cargo.toml
 +++ b/crates/horizon-friends/Cargo.toml
 @@ -12,12 +12,15 @@ chacha20poly1305 = "0.10"
@@ -2122,7 +2122,7 @@ index d53b943..cdfd3f5 100644
 +# This machine's addresses (LAN, VPNs such as Tailscale or ZeroTier, IPv6) for the code.
 +if-addrs = "0.13"
 diff --git a/crates/horizon-friends/src/direct.rs b/crates/horizon-friends/src/direct.rs
-index 7c80822..34d5f7b 100644
+index 7c80822d5..34d5f7b85 100644
 --- a/crates/horizon-friends/src/direct.rs
 +++ b/crates/horizon-friends/src/direct.rs
 @@ -2,10 +2,13 @@
@@ -2184,7 +2184,7 @@ index 7c80822..34d5f7b 100644
          let s = socket_for(&to)?;
          if s.bind(&SockAddr::from(unspecified(to.is_ipv6(), port)))
 diff --git a/crates/horizon-friends/src/reach.rs b/crates/horizon-friends/src/reach.rs
-index b817631..20d9c38 100644
+index b8176315c..20d9c3855 100644
 --- a/crates/horizon-friends/src/reach.rs
 +++ b/crates/horizon-friends/src/reach.rs
 @@ -63,6 +63,23 @@ fn virtual_interface(name: &str) -> bool {
@@ -2212,7 +2212,7 @@ index b817631..20d9c38 100644
  /// LAN), shared IPv4 (Tailscale's 100.64/10, CGNAT), other IPv4, one global
  /// IPv6. No link-local or unique-local; loopback on request.
 diff --git a/crates/horizon-hdr/Cargo.toml b/crates/horizon-hdr/Cargo.toml
-index 297c758..b55c0b8 100644
+index 297c758b1..b55c0b82c 100644
 --- a/crates/horizon-hdr/Cargo.toml
 +++ b/crates/horizon-hdr/Cargo.toml
 @@ -9,7 +9,7 @@ description = "HDR metadata for the swapchain: the Vulkan calls the crates that
@@ -2225,7 +2225,7 @@ index 297c758..b55c0b8 100644
  ash = { version = "0.38", default-features = false }
  
 diff --git a/crates/horizon-hdr/src/lib.rs b/crates/horizon-hdr/src/lib.rs
-index 4f7d737..78f3fc4 100644
+index 4f7d73769..78f3fc4c9 100644
 --- a/crates/horizon-hdr/src/lib.rs
 +++ b/crates/horizon-hdr/src/lib.rs
 @@ -9,7 +9,7 @@ pub mod wayland;
@@ -2271,7 +2271,7 @@ index 4f7d737..78f3fc4 100644
      let _ = (device, surface, paper_white, peak, black);
  }
 diff --git a/crates/horizon-prepare/src/artifacts.rs b/crates/horizon-prepare/src/artifacts.rs
-index 2facc04..d48e7d6 100644
+index 2facc045d..d48e7d6a0 100644
 --- a/crates/horizon-prepare/src/artifacts.rs
 +++ b/crates/horizon-prepare/src/artifacts.rs
 @@ -5,7 +5,7 @@
@@ -2293,7 +2293,7 @@ index 2facc04..d48e7d6 100644
      let checked = |directory: PathBuf| -> Result<(Artifacts, Vec<PathBuf>), String> {
          let candidate = Lock {
 diff --git a/crates/horizon-prepare/src/exporters.rs b/crates/horizon-prepare/src/exporters.rs
-index 1f20054..f5303e5 100644
+index 1f20054fa..f5303e5c4 100644
 --- a/crates/horizon-prepare/src/exporters.rs
 +++ b/crates/horizon-prepare/src/exporters.rs
 @@ -112,7 +112,7 @@ pub(crate) fn classes(run: &Run) -> Result<PathBuf, String> {
@@ -2306,7 +2306,7 @@ index 1f20054..f5303e5 100644
          fs::remove_dir_all(&cached).map_err(|e| e.to_string())?;
      }
 diff --git a/crates/horizon-prepare/src/files.rs b/crates/horizon-prepare/src/files.rs
-index 484c7bf..b816672 100644
+index 484c7bf7b..b81667259 100644
 --- a/crates/horizon-prepare/src/files.rs
 +++ b/crates/horizon-prepare/src/files.rs
 @@ -89,7 +89,7 @@ impl Import {
@@ -2319,7 +2319,7 @@ index 484c7bf..b816672 100644
          ));
          import.temporary = Some(temporary.clone());
 diff --git a/crates/horizon-prepare/src/java.rs b/crates/horizon-prepare/src/java.rs
-index 816b51b..54134b0 100644
+index 816b51b2e..54134b013 100644
 --- a/crates/horizon-prepare/src/java.rs
 +++ b/crates/horizon-prepare/src/java.rs
 @@ -229,6 +229,21 @@ pub fn find_runtime(major: i64, more: &[PathBuf]) -> Result<Jdk, String> {
@@ -2355,7 +2355,7 @@ index 816b51b..54134b0 100644
          command.args(args);
          if let Some(dir) = cwd {
 diff --git a/crates/horizon-prepare/src/lib.rs b/crates/horizon-prepare/src/lib.rs
-index c78eaa8..97eb7e7 100644
+index c78eaa8ea..97eb7e71a 100644
 --- a/crates/horizon-prepare/src/lib.rs
 +++ b/crates/horizon-prepare/src/lib.rs
 @@ -19,6 +19,8 @@ pub mod java;
@@ -2434,7 +2434,7 @@ index c78eaa8..97eb7e7 100644
          let mut all = vec![
              format!("-Xmx{heap}"),
 diff --git a/crates/horizon-prepare/src/main.rs b/crates/horizon-prepare/src/main.rs
-index 5c1cb1e..881432c 100644
+index 5c1cb1e0f..881432c45 100644
 --- a/crates/horizon-prepare/src/main.rs
 +++ b/crates/horizon-prepare/src/main.rs
 @@ -5,6 +5,43 @@ use std::io::Write;
@@ -2483,7 +2483,7 @@ index 5c1cb1e..881432c 100644
  const VERSION: &str = match option_env!("HORIZON_VERSION") {
 diff --git a/crates/horizon-prepare/src/web_proc.rs b/crates/horizon-prepare/src/web_proc.rs
 new file mode 100644
-index 0000000..cdde523
+index 000000000..cdde52390
 --- /dev/null
 +++ b/crates/horizon-prepare/src/web_proc.rs
 @@ -0,0 +1,229 @@
@@ -2717,7 +2717,7 @@ index 0000000..cdde523
 +    Ok((child, replies))
 +}
 diff --git a/crates/horizon-prepare/src/worker.rs b/crates/horizon-prepare/src/worker.rs
-index f9301dc..24f3ae7 100644
+index f9301dc56..24f3ae78e 100644
 --- a/crates/horizon-prepare/src/worker.rs
 +++ b/crates/horizon-prepare/src/worker.rs
 @@ -1,12 +1,20 @@
@@ -2864,7 +2864,7 @@ index f9301dc..24f3ae7 100644
      }
  }
 diff --git a/crates/horizon-threads/Cargo.toml b/crates/horizon-threads/Cargo.toml
-index f3de739..5f0843d 100644
+index f3de73906..5f0843d32 100644
 --- a/crates/horizon-threads/Cargo.toml
 +++ b/crates/horizon-threads/Cargo.toml
 @@ -6,7 +6,8 @@ license.workspace = true
@@ -2878,7 +2878,7 @@ index f3de739..5f0843d 100644
  libmimalloc-sys = { version = "0.1.49", default-features = false, features = ["extended"] }
  
 diff --git a/crates/horizon-threads/src/lib.rs b/crates/horizon-threads/src/lib.rs
-index 444760f..d529d42 100644
+index 444760f66..d529d42b6 100644
 --- a/crates/horizon-threads/src/lib.rs
 +++ b/crates/horizon-threads/src/lib.rs
 @@ -199,14 +199,86 @@ pub fn catch_stop_signals() {
@@ -2986,7 +2986,7 @@ index 444760f..d529d42 100644
      }
 diff --git a/crates/horizon-web/Cargo.toml b/crates/horizon-web/Cargo.toml
 new file mode 100644
-index 0000000..1d1d721
+index 000000000..1d1d72171
 --- /dev/null
 +++ b/crates/horizon-web/Cargo.toml
 @@ -0,0 +1,15 @@
@@ -3007,7 +3007,7 @@ index 0000000..1d1d721
 +log = "0.4"
 diff --git a/crates/horizon-web/src/gpu.rs b/crates/horizon-web/src/gpu.rs
 new file mode 100644
-index 0000000..f40e440
+index 000000000..f40e440ce
 --- /dev/null
 +++ b/crates/horizon-web/src/gpu.rs
 @@ -0,0 +1,2282 @@
@@ -5295,7 +5295,7 @@ index 0000000..f40e440
 +}
 diff --git a/crates/horizon-web/src/gpu/convert.rs b/crates/horizon-web/src/gpu/convert.rs
 new file mode 100644
-index 0000000..d2feca5
+index 000000000..d2feca55d
 --- /dev/null
 +++ b/crates/horizon-web/src/gpu/convert.rs
 @@ -0,0 +1,591 @@
@@ -5892,7 +5892,7 @@ index 0000000..d2feca5
 +}
 diff --git a/crates/horizon-web/src/lib.rs b/crates/horizon-web/src/lib.rs
 new file mode 100644
-index 0000000..29f41b2
+index 000000000..29f41b2cb
 --- /dev/null
 +++ b/crates/horizon-web/src/lib.rs
 @@ -0,0 +1,8 @@
@@ -5904,9 +5904,32 @@ index 0000000..29f41b2
 +
 +#[cfg(target_family = "wasm")]
 +pub mod gpu;
+diff --git a/research-lock.json b/research-lock.json
+index 719c26640..32f0bc88d 100644
+--- a/research-lock.json
++++ b/research-lock.json
+@@ -6,14 +6,16 @@
+       "4fe1aa1ef8da1cb95c5bad1fb98890ca56dd8ca3",
+       "702fe59163c6ee6578607daa85811d9bc9c7cc40",
+       "61fff1316bd50312624a858bbb5eb18fa45208ed",
+-      "5df1795e16eea19d75b923d66ecca9ce183353c5"
++      "5df1795e16eea19d75b923d66ecca9ce183353c5",
++      "80608ff6753705b6a82e2cb86a5937d4d233abd4"
+     ],
+     "accepted_manifest_note": "Other 26.3 version JSONs Mojang republished: only assetIndex differs (non-English translations), jars and libraries are identical. A launcher may still hold any of them.",
+     "accepted_asset_index_sha1": [
+       "abfaa525f923f807df8b4e4d29c1b5e3a104adbe",
+       "1e4e4a68dece1c0f51b8f93b45da8fe8da51bcd3",
+       "0c8f43b28f837869c1e54a6aeb22c396a1548946",
+-      "917ff6d74b9f635c46bac0d28857206bbcc1ffe4"
++      "917ff6d74b9f635c46bac0d28857206bbcc1ffe4",
++      "331e5c80937c9cd79647ab34bdc1cbb5ef09f456"
+     ],
+     "accepted_asset_index_note": "The asset indexes (id 34) of those republished version JSONs: a launcher keeps one 34.json, the last it downloaded, whichever version JSON it reads.",
+     "client_sha1": "e877b6a07acd633fb3bb475002175cec036e7b87",
 diff --git a/third_party/cpal/.cargo-ok b/third_party/cpal/.cargo-ok
 new file mode 100644
-index 0000000..5f8b795
+index 000000000..5f8b79583
 --- /dev/null
 +++ b/third_party/cpal/.cargo-ok
 @@ -0,0 +1 @@
@@ -5914,7 +5937,7 @@ index 0000000..5f8b795
 \ No newline at end of file
 diff --git a/third_party/cpal/Cargo.lock b/third_party/cpal/Cargo.lock
 deleted file mode 100644
-index 4f641b1..0000000
+index 4f641b11b..000000000
 --- a/third_party/cpal/Cargo.lock
 +++ /dev/null
 @@ -1,1289 +0,0 @@
@@ -7208,7 +7231,7 @@ index 4f641b1..0000000
 -source = "registry+https://github.com/rust-lang/crates.io-index"
 -checksum = "589f6da84c646204747d1270a2a5661ea66ed1cced2631d546fdfb155959f9ec"
 diff --git a/third_party/cpal/src/host/mod.rs b/third_party/cpal/src/host/mod.rs
-index 0c61a59..aa319fe 100644
+index 0c61a5910..aa319fe71 100644
 --- a/third_party/cpal/src/host/mod.rs
 +++ b/third_party/cpal/src/host/mod.rs
 @@ -24,6 +24,8 @@ pub(crate) mod emscripten;
@@ -7222,7 +7245,7 @@ index 0c61a59..aa319fe 100644
  #[cfg(all(target_arch = "wasm32", feature = "wasm-bindgen"))]
 diff --git a/third_party/cpal/src/host/wasi/mod.rs b/third_party/cpal/src/host/wasi/mod.rs
 new file mode 100644
-index 0000000..dd96ff9
+index 000000000..dd96ff9cb
 --- /dev/null
 +++ b/third_party/cpal/src/host/wasi/mod.rs
 @@ -0,0 +1,263 @@
@@ -7490,7 +7513,7 @@ index 0000000..dd96ff9
 +    }
 +}
 diff --git a/third_party/cpal/src/platform/mod.rs b/third_party/cpal/src/platform/mod.rs
-index c60e63d..2c63656 100644
+index c60e63d55..2c6365663 100644
 --- a/third_party/cpal/src/platform/mod.rs
 +++ b/third_party/cpal/src/platform/mod.rs
 @@ -673,6 +673,25 @@ mod platform_impl {
@@ -7529,14 +7552,14 @@ index c60e63d..2c63656 100644
      pub use crate::host::null::{
 diff --git a/third_party/winit/.cargo-ok b/third_party/winit/.cargo-ok
 new file mode 100644
-index 0000000..5f8b795
+index 000000000..5f8b79583
 --- /dev/null
 +++ b/third_party/winit/.cargo-ok
 @@ -0,0 +1 @@
 +{"v":1}
 \ No newline at end of file
 diff --git a/third_party/winit/Cargo.toml b/third_party/winit/Cargo.toml
-index 4bfded8..1827d89 100644
+index 4bfded8a0..1827d89bf 100644
 --- a/third_party/winit/Cargo.toml
 +++ b/third_party/winit/Cargo.toml
 @@ -219,10 +219,10 @@ features = ["env-filter"]
@@ -7582,7 +7605,7 @@ index 4bfded8..1827d89 100644
  features = [
      "AbortController",
 diff --git a/third_party/winit/build.rs b/third_party/winit/build.rs
-index 6a4528b..a04e35d 100644
+index 6a4528b3b..a04e35daf 100644
 --- a/third_party/winit/build.rs
 +++ b/third_party/winit/build.rs
 @@ -20,6 +20,8 @@ fn main() {
@@ -7595,7 +7618,7 @@ index 6a4528b..a04e35d 100644
  
      // Winit defined cfgs.
 diff --git a/third_party/winit/src/platform/mod.rs b/third_party/winit/src/platform/mod.rs
-index 4f59303..7f52731 100644
+index 4f59303ed..7f5273173 100644
 --- a/third_party/winit/src/platform/mod.rs
 +++ b/third_party/winit/src/platform/mod.rs
 @@ -47,6 +47,7 @@ pub mod pump_events;
@@ -7607,7 +7630,7 @@ index 4f59303..7f52731 100644
  ))]
  pub mod modifier_supplement;
 diff --git a/third_party/winit/src/platform_impl/mod.rs b/third_party/winit/src/platform_impl/mod.rs
-index 3bfce68..2c4bf0c 100644
+index 3bfce6887..2c4bf0c4c 100644
 --- a/third_party/winit/src/platform_impl/mod.rs
 +++ b/third_party/winit/src/platform_impl/mod.rs
 @@ -11,6 +11,8 @@ mod linux;
@@ -7637,7 +7660,7 @@ index 3bfce68..2c4bf0c 100644
  compile_error!("The platform you're compiling for is not supported by winit");
 diff --git a/third_party/winit/src/platform_impl/wasi/event_loop.rs b/third_party/winit/src/platform_impl/wasi/event_loop.rs
 new file mode 100644
-index 0000000..a12a5b2
+index 000000000..a12a5b2a5
 --- /dev/null
 +++ b/third_party/winit/src/platform_impl/wasi/event_loop.rs
 @@ -0,0 +1,563 @@
@@ -8206,7 +8229,7 @@ index 0000000..a12a5b2
 +}
 diff --git a/third_party/winit/src/platform_impl/wasi/mod.rs b/third_party/winit/src/platform_impl/wasi/mod.rs
 new file mode 100644
-index 0000000..da4e02f
+index 000000000..da4e02fd6
 --- /dev/null
 +++ b/third_party/winit/src/platform_impl/wasi/mod.rs
 @@ -0,0 +1,170 @@
@@ -8382,7 +8405,7 @@ index 0000000..da4e02f
 +}
 diff --git a/third_party/winit/src/platform_impl/wasi/window.rs b/third_party/winit/src/platform_impl/wasi/window.rs
 new file mode 100644
-index 0000000..75c7beb
+index 000000000..75c7bebf3
 --- /dev/null
 +++ b/third_party/winit/src/platform_impl/wasi/window.rs
 @@ -0,0 +1,382 @@
