@@ -1020,7 +1020,7 @@ index 5f8cc5837..02dc78f3b 100644
          assert_eq!(got[1]["args"]["activity"], Value::Null);
          assert_ne!(got[0]["nonce"], got[1]["nonce"]);
 diff --git a/crates/horizon-client/src/game.rs b/crates/horizon-client/src/game.rs
-index f49a94359..b09c5fbce 100644
+index f49a94359..48a4c347e 100644
 --- a/crates/horizon-client/src/game.rs
 +++ b/crates/horizon-client/src/game.rs
 @@ -499,15 +499,21 @@ impl Options {
@@ -1053,7 +1053,28 @@ index f49a94359..b09c5fbce 100644
              },
              distance: 12,
              distance_override: None,
-@@ -18320,7 +18326,10 @@ mod startup_cpu_tests {
+@@ -6916,6 +6922,8 @@ impl Game<'_> {
+         self.has_singleplayer_server()
+             && !self.is_published()
+             && self.title.is_none()
++            // LevelLoadingScreen is no pause screen: the server keeps loading the spawn.
++            && self.loading_reason().is_none()
+             && (matches!(
+                 self.screen,
+                 Screen::Paused
+@@ -14138,6 +14146,11 @@ impl Game<'_> {
+     }
+     /// A key press while a world is open (keyboard or control socket).
+     fn key_pressed(&mut self, key: KeyCode) -> Result<()> {
++        // LevelLoadingScreen takes the keys and Escape does not close it
++        // (shouldCloseOnEsc): no pause screen opens behind it.
++        if self.remote.is_none() && self.loading_reason().is_some() {
++            return Ok(());
++        }
+         if self.sleeping.is_some()
+             && self.screen == Screen::Playing
+             && !matches!(
+@@ -18320,7 +18333,10 @@ mod startup_cpu_tests {
  
      #[test]
      fn a_folder_without_prepared_files_is_named_before_loading() {
@@ -1065,7 +1086,7 @@ index f49a94359..b09c5fbce 100644
          let _ = std::fs::remove_dir_all(&root);
          let missing = missing_resources(&root.join(".local/horizon-client/26.3"))
              .expect("no manifest is reported");
-@@ -18335,7 +18344,10 @@ mod startup_cpu_tests {
+@@ -18335,7 +18351,10 @@ mod startup_cpu_tests {
  
      #[test]
      fn worker_prepares_owned_models_and_inventory_before_handoff() {
@@ -1077,7 +1098,7 @@ index f49a94359..b09c5fbce 100644
          std::fs::create_dir_all(&root).unwrap();
          std::fs::write(
              root.join("entity-models.json"),
-@@ -18782,9 +18794,9 @@ mod tests {
+@@ -18782,9 +18801,9 @@ mod tests {
  
      #[test]
      fn integrated_server_save_persists_owner_player_data() {
