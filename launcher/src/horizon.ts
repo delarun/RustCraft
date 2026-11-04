@@ -12,7 +12,9 @@ import { ensurePack } from './jvm/pack';
 import type { MountSpec, ProcessConfig } from './jvm/protocol';
 import { GAME_DIR, layout } from './mojang/layout';
 import { mirrorUrl } from './mojang/mirror';
-import type { VersionJson } from './mojang/types';
+import { isHostNativeClassifier, mavenPath, parseMaven } from './mojang/maven';
+import { BROWSER_PLATFORM, rulesAllow } from './mojang/rules';
+import type { Artifact, VersionJson } from './mojang/types';
 import { modulesPath, vmMounts } from './mojang/vm';
 import { readFileBytes, writeFile } from './storage/opfs';
 import { RJAVA_WASM_URL } from './ui/game';
@@ -113,24 +115,45 @@ async function sha1Hex(data: Uint8Array<ArrayBuffer>): Promise<string> {
   return Array.from(digest, (b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-/** Mojang's server jar for `version`, which the exporters need, beside its client jar. */
-async function ensureServerJar(version: VersionJson, report: PrepareReport) {
-  const server = version.downloads.server;
-  if (!server) throw new Error(`${version.id} has no server jar`);
-  const path = serverJar(version.id);
+/** `artifact` at `path` in the game directory, downloaded from Mojang unless it is there already. */
+async function ensureArtifact(path: string, artifact: Artifact, report: PrepareReport) {
   const existing = await readFileBytes(path);
-  if (existing && existing.byteLength === server.size && (await sha1Hex(existing)) === server.sha1) return;
-  report.status(`Downloading the ${version.id} server jar from Mojang`);
-  const response = await fetch(mirrorUrl(server.url));
-  if (!response.ok) throw new Error(`${server.url}: HTTP ${response.status}`);
+  if (existing && existing.byteLength === artifact.size && (await sha1Hex(existing)) === artifact.sha1) return;
+  report.status(`Downloading ${path.slice(path.lastIndexOf('/') + 1)} from Mojang`);
+  const response = await fetch(mirrorUrl(artifact.url));
+  if (!response.ok) throw new Error(`${artifact.url}: HTTP ${response.status}`);
   const data = new Uint8Array(await response.arrayBuffer());
-  if ((await sha1Hex(data)) !== server.sha1) throw new Error(`${server.url}: not the file Mojang lists (SHA-1)`);
+  if ((await sha1Hex(data)) !== artifact.sha1) throw new Error(`${artifact.url}: not the file Mojang lists (SHA-1)`);
   await writeFile(path, data);
 }
 
 /**
+ * The host-native jars (natives-linux, Netty's linux-x86_64) that the launcher's installer skips,
+ * since our JVM brings its own native code, but horizon-prepare insists on: it checks every
+ * library the official launcher installs, and on wasm32 it picks Linux's x64 ones.
+ */
+function nativeLibraries(version: VersionJson): { path: string; artifact: Artifact }[] {
+  const arm = /-(arm64|aarch64|aarch_64)$/;
+  return version.libraries.flatMap((lib) => {
+    const artifact = lib.downloads?.artifact;
+    const classifier = parseMaven(lib.name).classifier;
+    if (!artifact || !isHostNativeClassifier(classifier) || arm.test(`-${classifier}`)) return [];
+    if (!rulesAllow(lib.rules, BROWSER_PLATFORM)) return [];
+    return [{ path: `libraries/${artifact.path ?? mavenPath(parseMaven(lib.name))}`, artifact }];
+  });
+}
+
+/** Mojang's files the exporters need that the launcher does not install: the server jar, native jars. */
+async function ensureGameFiles(version: VersionJson, report: PrepareReport) {
+  const server = version.downloads.server;
+  if (!server) throw new Error(`${version.id} has no server jar`);
+  await ensureArtifact(serverJar(version.id), server, report);
+  for (const { path, artifact } of nativeLibraries(version)) await ensureArtifact(path, artifact, report);
+}
+
+/**
  * Makes Horizon's resources for `version` (its pinned one) unless they are ready: Horizon's
- * files, Mojang's server jar, then horizon-prepare (a few minutes the first time).
+ * files, Mojang's server jar and native jars, then horizon-prepare (a few minutes the first time).
  */
 export async function prepareHorizon(info: HorizonInfo, version: VersionJson, report: PrepareReport) {
   await ensurePack({ url: `${HORIZON_URL}${info.pack}`, root: 'horizon/root', tag: info.packTag }, report.status);
@@ -140,7 +163,7 @@ export async function prepareHorizon(info: HorizonInfo, version: VersionJson, re
   const output = resources(info.version);
   // Reads no game files and runs no Java: 0 when the resources are complete and current.
   if ((await runPrepare(wasm, version, ['--check', '--root', ROOT, '--output', output], report)) === 0) return;
-  await ensureServerJar(version, report);
+  await ensureGameFiles(version, report);
   const id = version.id;
   const code = await runPrepare(
     wasm,
